@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>상식퀴즈 챌린지</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);min-height:100vh;color:#fff;display:flex;justify-content:center;align-items:center}
+.container{width:100%;max-width:700px;padding:20px}
+.hidden{display:none!important}
+.screen{text-align:center;animation:fadeIn .4s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.logo{font-size:3em;margin-bottom:10px;font-weight:800;background:linear-gradient(90deg,#f7971e,#ffd200);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.subtitle{font-size:1.05em;color:#aaa;margin-bottom:30px;line-height:1.6}
+.input-group{margin:15px auto;max-width:400px}
+.input-group label{display:block;text-align:left;margin-bottom:5px;font-size:.9em;color:#ccc}
+.input-group input{width:100%;padding:12px 16px;border:2px solid #444;border-radius:10px;background:#1a1a2e;color:#fff;font-size:1em;outline:none;transition:border .2s}
+.input-group input:focus{border-color:#ffd200}
+.btn{padding:14px 40px;border:none;border-radius:12px;font-size:1.1em;font-weight:700;cursor:pointer;transition:all .2s;margin:10px 5px}
+.btn-primary{background:linear-gradient(90deg,#f7971e,#ffd200);color:#1a1a2e}
+.btn-primary:hover{transform:scale(1.05);box-shadow:0 0 25px rgba(255,210,0,.4)}
+.btn-secondary{background:transparent;border:2px solid #666;color:#ccc}
+.btn-secondary:hover{border-color:#ffd200;color:#ffd200}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.quiz-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.timer{font-size:1.4em;font-weight:700;color:#ffd200;font-variant-numeric:tabular-nums}
+.timer.danger{color:#f44336;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.progress-bar{width:100%;height:8px;background:#333;border-radius:4px;margin-bottom:25px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,#f7971e,#ffd200);border-radius:4px;transition:width .3s}
+.q-num{font-size:.9em;color:#aaa}
+.q-category{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.8em;font-weight:600;margin-left:8px}
+.cat-history{background:#e91e63;color:#fff}
+.cat-science{background:#4caf50;color:#fff}
+.cat-fun{background:#ff9800;color:#fff}
+.question-card{background:rgba(255,255,255,.07);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:30px;margin-bottom:20px}
+.question-text{font-size:1.2em;line-height:1.6;font-weight:600}
+.answer-input{width:100%;padding:16px 20px;border:2px solid #444;border-radius:12px;background:rgba(255,255,255,.05);color:#fff;font-size:1.1em;outline:none;transition:border .2s;text-align:center;margin-top:15px}
+.answer-input:focus{border-color:#ffd200}
+.answer-input.correct{border-color:#4caf50!important;background:rgba(76,175,80,.15)!important;color:#4caf50!important}
+.answer-input.wrong{border-color:#f44336!important;background:rgba(244,67,54,.15)!important;color:#f44336!important}
+.option-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.option-btn{padding:16px 12px;border:2px solid #444;border-radius:12px;background:rgba(255,255,255,.05);color:#fff;font-size:1em;cursor:pointer;transition:all .2s;text-align:center}
+.option-btn:hover{border-color:#ffd200;background:rgba(255,210,0,.08)}
+.option-btn.selected{border-color:#ffd200;background:rgba(255,210,0,.15);font-weight:700}
+.option-btn.correct{border-color:#4caf50!important;background:rgba(76,175,80,.2)!important;color:#4caf50!important;font-weight:700}
+.option-btn.wrong{border-color:#f44336!important;background:rgba(244,67,54,.15)!important;color:#f44336!important}
+.answer-result{margin-top:12px;font-size:1em;font-weight:600;min-height:1.5em}
+.answer-result.is-correct{color:#4caf50}
+.answer-result.is-wrong{color:#f44336}
+.explain-box{margin-top:14px;padding:14px 18px;border-radius:10px;background:rgba(255,210,0,.08);border:1px solid rgba(255,210,0,.25);text-align:left;font-size:.92em;line-height:1.6;color:#ddd}
+.explain-box strong{color:#ffd200}
+.nav-btns{display:flex;justify-content:center;gap:10px;margin-top:20px}
+.result-card{background:rgba(255,255,255,.07);border-radius:16px;padding:40px;margin-bottom:20px}
+.score-circle{width:150px;height:150px;border-radius:50%;border:8px solid #ffd200;display:flex;flex-direction:column;justify-content:center;align-items:center;margin:0 auto 20px}
+.score-num{font-size:2.5em;font-weight:800;color:#ffd200}
+.score-label{font-size:.8em;color:#aaa}
+.score-details{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin:20px 0}
+.score-item{background:rgba(255,255,255,.05);border-radius:10px;padding:15px}
+.score-item .val{font-size:1.5em;font-weight:700}
+.score-item .lbl{font-size:.8em;color:#aaa;margin-top:3px}
+.ranking-card{background:rgba(255,255,255,.07);border-radius:16px;padding:30px;margin-bottom:20px}
+.ranking-table{width:100%;border-collapse:collapse}
+.ranking-table th{text-align:left;padding:12px 10px;border-bottom:2px solid #444;color:#aaa;font-size:.85em}
+.ranking-table td{padding:12px 10px;border-bottom:1px solid rgba(255,255,255,.05)}
+.ranking-table tr.my-rank{background:rgba(255,210,0,.1)}
+.rank-medal{font-size:1.2em}
+.rank-name{font-weight:600}
+.rank-score{color:#ffd200;font-weight:700}
+.rank-time{color:#aaa;font-size:.9em}
+.loading{display:flex;justify-content:center;align-items:center;padding:40px}
+.spinner{width:40px;height:40px;border:4px solid #333;border-top-color:#ffd200;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:500px){.logo{font-size:2em}.question-text{font-size:1.05em}.score-details{grid-template-columns:1fr}.quiz-header{flex-direction:column;align-items:flex-start}.option-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div id="screen-start" class="screen hidden">
+    <div class="logo">상식퀴즈 챌린지</div>
+    <p class="subtitle">128문제 중 32문제를 랜덤으로 출제합니다<br>주관식 + 객관식 혼합 / 역사 / 과학 / 재밌는</p>
+    <div class="input-group">
+      <label for="nickname">닉네임</label>
+      <input type="text" id="nickname" placeholder="닉네임을 입력하세요" maxlength="20">
+    </div>
+    <div style="margin-top:20px">
+      <button class="btn btn-primary" onclick="startQuiz()">퀴즈 시작</button>
+      <button class="btn btn-secondary" onclick="showRankingOnly()">랭킹 보기</button>
+    </div>
+  </div>
+  <div id="screen-quiz" class="screen hidden">
+    <div class="quiz-header">
+      <span id="q-counter" class="q-num"></span>
+      <span id="q-category-badge"></span>
+      <span id="timer" class="timer">30:00</span>
+    </div>
+    <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+    <div class="question-card">
+      <p id="question-text" class="question-text"></p>
+      <div id="options-container" class="option-grid hidden"></div>
+      <input type="text" id="answer-input" class="answer-input hidden" placeholder="정답을 입력하세요" autocomplete="off">
+      <p id="answer-result" class="answer-result"></p>
+      <div id="explain-box" class="explain-box hidden"></div>
+    </div>
+    <div class="nav-btns">
+      <button id="btn-submit" class="btn btn-primary" onclick="submitAnswer()">정답 제출</button>
+      <button id="btn-next" class="btn btn-primary hidden" onclick="nextQuestion()">다음 문제</button>
+    </div>
+  </div>
+  <div id="screen-result" class="screen hidden">
+    <div class="result-card">
+      <h2 id="result-title" style="margin-bottom:15px"></h2>
+      <div class="score-circle">
+        <span id="result-score" class="score-num"></span>
+        <span class="score-label">점수</span>
+      </div>
+      <div class="score-details">
+        <div class="score-item"><div class="val" style="color:#4caf50" id="result-correct">0</div><div class="lbl">정답</div></div>
+        <div class="score-item"><div class="val" style="color:#f44336" id="result-wrong">0</div><div class="lbl">오답</div></div>
+        <div class="score-item"><div class="val" style="color:#ffd200" id="result-time">0</div><div class="lbl">소요시간(초)</div></div>
+      </div>
+    </div>
+    <div class="ranking-card">
+      <h3 style="margin-bottom:15px">실시간 랭킹</h3>
+      <div id="ranking-result-wrap"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+  </div>
+  <div id="screen-ranking" class="screen hidden">
+    <div class="ranking-card">
+      <h2 style="margin-bottom:5px">전체 랭킹</h2>
+      <p style="color:#aaa;margin-bottom:20px;font-size:.9em">상위 50명</p>
+      <div id="ranking-standalone-wrap"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+    <div style="text-align:center;margin-top:15px">
+      <button class="btn btn-secondary" onclick="goStart()">돌아가기</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+const firebaseConfig={apiKey:"AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k",authDomain:"quiz-ranking-6cb9f.firebaseapp.com",databaseURL:"https://quiz-ranking-6cb9f-default-rtdb.firebaseio.com",projectId:"quiz-ranking-6cb9f",storageBucket:"quiz-ranking-6cb9f.firebasestorage.app",messagingSenderId:"488270918333",appId:"1:488270918333:web:93f4612335b58780b43dd4"};
+let db,firebaseReady=false;try{firebase.initializeApp(firebaseConfig);db=firebase.database();firebaseReady=true}catch(e){console.warn("파이어베이스 연결 실패:",e)}
+
+function normalize(s){
+  return s.toLowerCase()
+    .replace(/장군|왕|법칙|의|이식|에서|곱하기|나누기|더하기|빼기|프로|퍼센트|약|개|번|회|도|년|월|일|톤|km|cm|m|리터|억|kg|g|명|배|글자|초|시간|분|개월|%|원|SHU|℃|g/g,'')
+    .replace(/[\s~!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/g,'');
+}
+function checkAnswer(userInput,answers){
+  const n=normalize(userInput);
+  for(const a of answers){if(n===normalize(a))return true}
+  return false;
+}
+
+const allQuestions=[
+// ==================== 역사 (39문제) ====================
+{q:"조선 왕조의 첫 번째 왕이자 건국자는?",a:["이성계","태조"],cat:"역사",e:"1392년 이성계가 조선을 건국하고 태조라는 묘호를 받았습니다. 고려를 무너뜨리고 한양(서울)을 수도로 정했습니다."},
+{q:"이순신 장군이 학익진을 사용하여 크게 승리한 전투는?",a:["한산도대첩"],cat:"역사",e:"1592년 8월, 한산도 앞바다에서 학이 날개를 편 형태의 전법으로 왜선 59척을 격침한 해전입니다. 임진왜란 3대 대첩 중 하나입니다."},
+{q:"3·1운동이 일어난 해는?",o:["1910","1919","1925","1945"],a:1,t:"객관식",cat:"역사",e:"1919년 3월 1일, 태극기 만세 시위가 전국으로 확산된 독립운동입니다. 민족대표 33인이 독립선언서를 발표했습니다."},
+{q:"고려의 수도는?",a:["개성"],cat:"역사",e:"고려 태조 왕건이 919년 수도로 정한 곳입니다. 개경이라고도 불렸으며, 현재 북한 개성시입니다."},
+{q:"백제의 마지막 수도는?",a:["사비","부여"],cat:"역사",e:"475년 고구려에 함락된 한성(위례성)에서 남쪽으로 천도하여 사비(현재 충남 부여)에 세운 수도입니다."},
+{q:"신라의 삼국 통일을 완성한 왕은?",a:["문무왕"],cat:"역사",e:"676년 당나라를 물리치고 한반도 내의 삼국 통일을 완성한 왕입니다. 수군을 조직해 바다를 지키기도 했습니다."},
+{q:"을미사변이 일어난 해는?",o:["1882","1894","1895","1905"],a:2,t:"객관식",cat:"역사",e:"1895년 일본군이 명성황후를 시해한 사건입니다. 을미년(1895)에 일어났습니다. 병인양요(1866), 임오군란(1882)과 혼동하지 마세요."},
+{q:"임진왜란이 시작된 해는?",o:["1592","1598","1636","1894"],a:0,t:"객관식",cat:"역사",e:"1592년 일본이 조선을 침략한 전쟁입니다. 1598년까지 7년간 계속되었으며, 이순신 장군의 활약이 결정적이었습니다."},
+{q:"세종대왕이 창제한 글은?",a:["한글","훈민정음"],cat:"역사",e:"1443년 세종대왕이 백성을 위해 만든 글자입니다. 정식 명칭은 '훈민정음'이며, 1446년 반포되었습니다."},
+{q:"한국전쟁 정전협정이 체결된 해는?",o:["1950","1953","1960","1945"],a:1,t:"객관식",cat:"역사",e:"1950년 6월 25일 시작되어 1953년 7월 27일 판문점에서 정전협정이 체결되었습니다. 휴전이지 종전은 아닙니다."},
+{q:"경술국치가 일어난 해는?",o:["1905","1910","1919","1945"],a:1,t:"객관식",cat:"역사",e:"1910년 8월 29일, 한일병합조약으로 조선이 일본에 완전히 병합된 사건입니다. '을사늑약(1905)'과 다릅니다."},
+{q:"조선 시대 최고의 교육 기관은?",a:["성균관"],cat:"역사",e:"1398년 태조 이성계가 세운 조선 최고 학문기관입니다. 유교 경전을 가르쳤으며, 성균관 대학의 전신입니다."},
+{q:"을사늑약이 체결된 해는?",o:["1905","1910","1919","1945"],a:0,t:"객관식",cat:"역사",e:"1905년 일본이 강요하여 체결된 불평등 조약입니다. 5대신(을사5적)이 서명하여 '을사조약'이라고도 합니다. 경술국치(1910)와 다릅니다."},
+{q:"고구려의 시조는?",a:["주몽","동명성왕"],cat:"역사",e:"기원전 37년 고구려를 건국한 인물입니다. '주몽'은 본명이고 '동명성왕'은 시호입니다."},
+{q:"신라의 시조는?",a:["박혁거세"],cat:"역사",e:"기원전 57년 신라를 건국한 인물입니다. 알에서 태어났다는 전설이 있으며, 성이 '박(朴)'입니다."},
+{q:"백제의 시조는?",a:["온조"],cat:"역사",e:"기원전 18년 고구려에서 남하하여 백제를 건국한 인물입니다. 고구려 동명성왕(주몽)의 아들입니다."},
+{q:"단군왕검이 세운 나라는?",a:["고조선"],cat:"역사",e:"기원전 2333년 단군왕검이 세운 나라로, 한국 최초의 국가로 알려져 있습니다. 10월 3일이 개천절입니다."},
+{q:"병인양요가 일어난 해는?",o:["1866","1876","1882","1894"],a:0,t:"객관식",cat:"역사",e:"1866년 프랑스가 조선을 침략한 사건입니다. 강화도에서 격퇴되었으며, 프랑스 군함 4척을 격침했습니다."},
+{q:"동학농민운동이 일어난 해는?",o:["1882","1894","1905","1919"],a:1,t:"객관식",cat:"역사",e:"1894년 농민들이 주도한 개혁운동입니다. '개세지변, 병영의세'를 구호로 내세웠으며, 갑오개혁의 직접적 원인이 되었습니다."},
+{q:"대한민국 정부가 수립된 해는?",a:["1948","1919"],cat:"역사",e:"1948년 8월 15일 대한민국 정부가 수립되었습니다. 1919년에는 상하이에 대한민국 임시정부가 수립되었습니다."},
+{q:"귀주대첩에서 거란군을 물리친 고려의 장군은?",a:["강감찬"],cat:"역사",e:"1019년 귀주에서 거란의 제4차 침입을 격퇴한 장군입니다. 거란군 7만 명 중 돌아간 사람은 수천 명에 불과했습니다."},
+{q:"강화도 조약이 체결된 해는?",o:["1866","1876","1882","1905"],a:1,t:"객관식",cat:"역사",e:"1876년 일본과 체결된 조약으로, 조선의 개국을 요구한 불평등 조약입니다. '을병개국 조약'이라고도 합니다."},
+{q:"신라 진흥왕이 정복 지역에 세운 비석은?",a:["진흥왕순수비"],cat:"역사",e:"540년대 신라가 한강 유역을 정복한 후 세운 비석입니다. 현재 북한 황해남도 봉산군에 있습니다."},
+{q:"조선의 사도세자는 누구의 아버지인가?",a:["정조"],cat:"역사",e:"사도세자는 영조의 아들이자 정조의 아버지입니다. 뒤주에 갇혀 죽은 비극적인 인물로, 정조가 효심으로 아버지를 기렸습니다."},
+{q:"우리나라가 일제강점기에서 광복한 해는?",a:["1945"],cat:"역사",e:"1945년 8월 15일 일본의 무条件항복으로 조선이 해방되었습니다. 이를 '광복절'이라 부르며 8월 15일에 기념합니다."},
+{q:"몽골의 침입 당시 처인성 전투에서 활약한 인물은?",a:["김윤후"],cat:"역사",e:"1231년 몽골의 첫 침입 때 처인성(용인)에서 적장 살리타를 목 벤 장수입니다. 부▦고려사에 나옵니다."},
+{q:"제주도의 옛 이름은?",a:["탐라"],cat:"역사",e:"탐라는 삼국시대부터 불리던 제주도의 옛 이름입니다. '탐라국'은 독자적인 문화를 가진 왕국이었습니다."},
+{q:"제2차 세계대전이 끝난 해는?",a:["1945"],cat:"역사",e:"1945년 8월 15일 일본의 항복으로 끝났습니다. 나치 독일은 그해 5월에 항복했으며, 전쟁은 1939년에 시작되었습니다."},
+{q:"1960년 이승만 정권의 부정선거에 항거하여 일어난 민주화 운동은?",a:["4·19혁명","419혁명"],cat:"역사",e:"1960년 4월 19일, 부정선거에 분노한 학생과 시민들이 일으킨 혁명입니다. 이승만 대통령이 퇴진하고 민주정부가 수립되었습니다."},
+{q:"경부고속도로가 전 구간 완공·개통된 해는?",o:["1965","1970","1975","1980"],a:1,t:"객관식",cat:"역사",e:"1970년 7월 7일 서울~부산 428km가 개통되었습니다. 박정희 대통령 시절 경제성장의 상징으로, construction仅 29개월 만에 완공되었습니다."},
+{q:"1980년 광주에서 일어난 대표적인 민주화 운동은?",a:["5·18민주화운동","518민주화운동"],cat:"역사",e:"1980년 5월 18일부터 27일까지 광주에서 일어난 시민 항쟁입니다. 계엄군의 진압으로 많은 희생자가 발생했습니다."},
+{q:"서울 올림픽이 열린 해는?",o:["1984","1988","1992","2000"],a:1,t:"객관식",cat:"역사",e:"1988년 9월 17일~10월 2일 서울에서 제24회 하계올림픽이 열렸습니다. 서울올림픽은 한국의 경제성장과 민주화를 세계에 알렸습니다."},
+{q:"대한민국이 외환위기로 IMF에 긴급 자금을 요청한 사건은?",a:["IMF외환위기"],cat:"역사",e:"1997년 11월, 한국 정부가 IMF에 570억 달러의 긴급 자금을 요청한 사건입니다. 외환보유고가 바닥나면서 발생했습니다."},
+{q:"한국과 일본이 공동으로 개최한 FIFA 월드컵이 열린 해는?",o:["2000","2002","2006","2010"],a:1,t:"객관식",cat:"역사",e:"2002년 한일 월드컵은 FIFA 월드컵 역사상 처음으로 공동 개최된 대회입니다. 한국이 4강에 오르는 성과를 거두었습니다."},
+{q:"대한민국 최초로 우주에 간 우주인은?",a:["이소연"],cat:"역사",e:"2008년 4월 러시아 소유즈 우주선을 타고 국제우주정거장(ISS)에 갔습니다. 한국인 최초의 우주비행사입니다."},
+{q:"1987년 직선제 개헌을 이끌어낸 민주화 운동은?",a:["6월민주항쟁"],cat:"역사",e:"1987년 6월 10일부터 전국에서 일어난 민주화 시위입니다. 6·29 선언으로 직선제 개헌이 이뤄졌습니다."},
+{q:"대한민국 최초의 순수 우리 기술로 개발된 발사체는?",a:["누리호"],cat:"역사",e:"한국항공우주연구원(KARI)이 개발한 우주발사체입니다. 2021년 10월 첫 발사에 성공했으며, 3차 발사에서 위성 궤도 진입에 성공했습니다."},
+{q:"대한민국에서 원(원) 화폐 단위가 도입된 해는?",o:["1955","1960","1962","1965"],a:2,t:"객관식",cat:"역사",e:"1962년 6월 10일, 기존 환어음에서 원(圓) 화폐단위로 개편되었습니다. 현재 '원'은 세계에서 가치가 낮은 화폐 중 하나입니다."},
+{q:"KTX 고속열차가 처음으로 개통된 해는?",o:["2000","2002","2004","2008"],a:2,t:"객관식",cat:"역사",e:"2004년 4월 1일 서울~부산 구간이 개통되었습니다. 프랑스 TGV 기술을 기반으로 하며, 최고 시속 305km입니다."},
+
+// ==================== 과학 (38문제) ====================
+{q:"지구에서 가장 가까운 항성은?",a:["태양"],cat:"과학",e:"태양은 지구에서 약 1억 5천만 km 떨어진 별입니다. 태양계의 중심에 있으며, 지구에 빛과 열을 공급합니다."},
+{q:"태양계에서 가장 큰 행성은?",a:["목성"],cat:"과학",e:"목성은 지구보다 약 1,300배 더 큰 가스 행성입니다. 대적점이라 불리는 거대 폭풍이 특징이며, 95개의 위성을 거느리고 있습니다."},
+{q:"태양계에서 가장 작은 행성은?",a:["수성"],cat:"과학",e:"수성은 태양에 가장 가까운 행성으로, 지구의 약 38% 크기입니다. 대기가 거의 없어 낮에는 430°C, 밤에는 -180°C까지 온도가 변합니다."},
+{q:"화성의 별명은?",a:["붉은행성"],cat:"과학",e:"화성은 표면의 산화철(녹) 때문에 붉게 보여 '붉은 행성'이라 불립니다. 인류가 가장 많이 탐사한 행성 중 하나입니다."},
+{q:"지구 대기의 가장 바깥쪽 층은?",a:["외기권"],cat:"과학",e:"외기권(권성권)은 고도 약 500km 이상의 영역으로, 대기의 밀도가 거의 진공에 가깝습니다. 국제우주정거장이 이 층에 있습니다."},
+{q:"지구 대기의 가장 아래쪽 층은?",a:["대류권"],cat:"과학",e:"대류권은 지표면부터 약 10~16km까지의 영역으로, 날씨가 일어나는 층입니다. 구름, 비, 눈 등이 모두 이 층에서 형성됩니다."},
+{q:"오존층이 주로 존재하는 대기층은?",a:["성층권"],cat:"과학",e:"오존층은 고도 약 20~30km의 성층권에 존재합니다. 태양의 유해한 자외선을 흡수하여 지표면의 생명체를 보호합니다."},
+{q:"세계에서 가장 깊은 해구는?",a:["마리아나해구"],cat:"과학",e:"태평양 서쪽에 위치한 해구로, 최심부가 약 10,994m입니다. '체レン코프 해연'이라고도 하며, 수압이 극도로 높습니다."},
+{q:"지구의 평균 표면 온도는?",a:["15도"],cat:"과학",e:"지구 전체 평균 표면 온도는 약 15°C입니다. 지역과 계절에 따라 매우 크게 다르며, 사막은 50°C 이상, 극지방은 -60°C까지 떨어집니다."},
+{q:"세계에서 가장 큰 섬은?",a:["그린란드"],cat:"과학",e:"약 216만 km²로, 호주를 제외한 대륙이 아닌 섬 중에서는 세계 최대입니다. 덴마크령이며, 대부분 빙하로 덮여 있습니다."},
+{q:"지구에서 달까지의 평균 거리는?",o:["3.8만km","38만km","380만km","3800만km"],a:1,t:"객관식",cat:"과학",e:"약 38만 4,400km입니다. 빛의 속도로 약 1.3초, 일반 자동차로 가면 약 170일이 걸립니다."},
+{q:"소금의 주성분은?",a:["염화나트륨"],cat:"과학",e:"소금의 주성분은 NaCl(염화나트륨)입니다. 나트륨과 염소 원소로 구성되어 있으며, 인체에 필수적인 미네랄입니다."},
+{q:"공기 중 두 번째로 많은 기체는?",a:["산소"],cat:"과학",e:"공기 구성비율: 질소 78%, 산소 21%, 아르곤 0.93%, 이산화탄소 0.04% 순입니다. 산소는 생명체의 호흡에 필수적입니다."},
+{q:"물의 끓는점은?",a:["100도"],cat:"과학",e:"표준 대기압(1atm)에서 물의 끓는점은 100°C입니다. 고도가 높아지면气压이 낮아져 끓는점이 내려갑니다."},
+{q:"물의 어는점은?",a:["0도"],cat:"과학",e:"표준 대기압에서 물의 어는점은 0°C입니다. 소금물 등 불순물이 있으면 어는점이 내려갑니다(어Blank점 내림)."},
+{q:"원소 주기율표에서 칼슘의 원자번호는?",o:["10","15","20","30"],a:2,t:"객관식",cat:"과학",e:"칼슘(Ca)은 원자번호 20번 원소입니다. 인체의 뼈와 치아를 구성하는 중요한 미네랄이며, 우유에 많습니다."},
+{q:"철이 녹스는 대표적인 화학 반응은?",a:["산화"],cat:"과학",e:"철이 산소와 수분과 반응하여 산화철(녹)이 되는 현상입니다. Fe₂O₃·nH₂O이 성분이며, 방치하면 부식됩니다."},
+{q:"소금물의 농도가 높아지면 어는점은?",a:["내려간다"],cat:"과학",e:"용질의 농도가 높아지면 용액의 어는점이 낮아집니다(어 Blank점 내림). 예: 바닷물은 민물보다 어는점이 낮아 -2°C에서 얼기 시작합니다."},
+{q:"가장 가벼운 원소는?",a:["수소"],cat:"과학",e:"수소(H)는 원자번호 1번으로, 우주에서 가장 가볍고 가장 많이 존재하는 원소입니다. 태양의 핵융합 연료이기도 합니다."},
+{q:"태양빛이 지구까지 오는 데 걸리는 시간은?",o:["8초","8분","8시간","8일"],a:1,t:"객관식",cat:"과학",e:"약 8분 20초(500초)입니다. 빛의 속도는 초당 약 30만 km이며, 태양~지구 거리는 약 1억 5천만 km입니다."},
+{q:"성인의 뼈는 보통 총 몇 개인가?",o:["106","206","306","406"],a:1,t:"객관식",cat:"과학",e:"성인은 뼈가 206개입니다. 아기는 약 300개로 태어나지만 성장하면서 뼈가 합쳐집니다. 가장 큰 뼈는 넓적다리뼈(대퇴골)입니다."},
+{q:"호흡에 가장 중요한 장기는?",a:["폐"],cat:"과학",e:"폐는 산소를 들이마시고 이산화탄소를 내보내는 기관입니다. 폐포라 불리는 작은 주머니 약 3억 개로 구성되어 있습니다."},
+{q:"세포에서 에너지 생산을 담당하는 소기관은?",a:["미토콘드리아"],cat:"과학",e:"미토콘드리아는 세포의 '에너지 공장'으로 불립니다. 유기물에서 ATP(에너지)를 생산하며, 모계유전됩니다."},
+{q:"성인의 치아는 보통 총 몇 개인가?",o:["20","28","32","36"],a:2,t:"객관식",cat:"과학",e:"성인은 치아가 32개입니다(사랑니 포함). 유치(영구치)는 보통 6세부터 빠지기 시작하여 12~13세에 완성됩니다."},
+{q:"인간의 눈에서 빛을 굴절시키는 구조는?",a:["수정체"],cat:"과학",e:"수정체(수정체)는 눈 속에서 빛을 굴절시켜 망막에 상을 맺히게 하는 투명한 렌즈입니다. 근시·원시 시 굴절 이상이 생기는 부위입니다."},
+{q:"혈액에서 산소를 운반하는 단백질은?",a:["혈색소","헤모글로빈"],cat:"과학",e:"헤모글로빈(혈색소)은 적혈구에 있는 단백질로, 철분을 포함하여 산소와 결합하여 운반합니다. 빨간색을 띠는 이유입니다."},
+{q:"인체에서 가장 큰 동맥은?",a:["대동맥"],cat:"과학",e:"대동맥은 심장에서 나온 혈액이 처음 통과하는 가장 굵은 동맥입니다. 직경 약 2.5cm이며, 전신에 혈액을 공급합니다."},
+{q:"인간의 몸에서 가장 단단한 조직은?",a:["법랑질"],cat:"과학",e:"법랑질(에나멜질)은 치아의 겉을 덮는 조직으로, 인체에서 가장 단단한 물질입니다. 약 96%가 무기질로 구성되어 있습니다."},
+{q:"혈액 응고에 중요한 역할을 하는 성분은?",a:["혈소판"],cat:"과학",e:"혈소판은 혈액 속의 작은 조각으로, 상처가 나면 모여서 혈액을 응고시켜 출혈을 멈추게 합니다."},
+{q:"인간의 몸에서 가장 큰 기관은?",a:["피부"],cat:"과학",e:"피부는 인체에서 가장 넓은 기관으로, 표면적이 약 1.5~2m²(성인)입니다. 체온 조절, 보호, 감각 등의 기능을 합니다."},
+{q:"세계에서 가장 큰 뜨거운 사막은?",a:["사하라","사하라사막"],cat:"과학",e:"약 920만 km²로 아프리카 북부에 위치합니다. '사막'은 강수량이 적은 지역을 뜻하며, 사하라의 일부는 실제로 눈이 내리기도 합니다."},
+{q:"태양 표면의 온도는?",o:["550도","5500도","55000도","550000도"],a:1,t:"객관식",cat:"과학",e:"태양 표면(광구)의 온도는 약 5,500°C입니다. 태양의 핵은 약 1,500만°C로, 태양 에너지는 핵융합 반응에서 나옵니다."},
+{q:"지표면을 따라 이동하는 지진파는?",a:["표면파"],cat:"과학",e:"표면파(S파의 일종)는 지표를 따라 퍼지며, P파보다 느리지만 파괴력이 더 큽니다. 건물 붕괴의 주범입니다."},
+{q:"지구의 대기는 몇 개의 주요 층으로 구분되는가?",o:["3","4","5","7"],a:2,t:"객관식",cat:"과학",e:"대기권, 성층권, 중간권, 열권, 외기권 등 5개 주요 층으로 구분됩니다. 지표면에서 멀어질수록 온도 변화가 다릅니다."},
+{q:"나침반의 N극은 어느 방향을 가리키는가?",a:["북쪽"],cat:"과학",e:"나침반 바늘의 N극은 지구 자기장의 자극(지자기 남극) 방향을 가리킵니다. 이것을 '자북(磁北)'이라 하며, 진북과 약간 다릅니다."},
+{q:"세계적으로 가장 많이 판매된 자동차 모델은?",o:["포드 F-150","혼다 시빅","토요타 코롤라","폭스바겐 비틀"],a:2,t:"객관식",cat:"과학",e:"토요타 코롤라는 1966년 출시 이후 5,000만 대 이상 판매된 세계 최다 판매 자동차입니다. 연비와 내구성으로 유명합니다."},
+{q:"머리카락과 손톱의 주성분인 단백질은?",a:["케라틴"],cat:"과학",e:"케라틴은 단백질의 일종으로, 머리카락, 손톱, 발톱, 뿔, 털 등을 구성합니다. 동물의 보호 조직으로 쓰입니다."},
+{q:"진공에서 빛의 속도는 초당 얼마인가?",o:["3만km","30만km","300만km","3억km"],a:1,t:"객관식",cat:"과학",e:"약 299,792 km/s(약 30만 km/s)입니다. 이는 우주에서 물질이나 에너지가 이동할 수 있는 최고 속도입니다."},
+
+// ==================== 재밌는 (51문제) ====================
+{q:"어린 왕자가 살던 소행성의 이름은?",a:["B-612","비612"],cat:"재밌는",e:"앙투안 드 생텍쥐페리의 소설 '어린 왕자'에 나오는 소행성입니다. 어린 왕자는 이곳에서 장미를 돌보며 살았습니다."},
+{q:"일반적인 피아노 건반은 총 몇 개인가?",o:["66","77","88","99"],a:2,t:"객관식",cat:"재밌는",e:"일반적인 피아노는 흰 건반 52개, 검은 건반 36개로 총 88개입니다. 음역은 A0(27.5Hz)부터 C8(4186Hz)까지입니다."},
+{q:"제주도가 삼다도라고 불리는 이유는?",a:["돌바람여자"],cat:"재밌는",e:"제주도에는 돌이 많고, 바람이 강하고, 여자가]!='다'는 의미입니다. 실제 제주도는 현무암 지대로 돌이 많습니다."},
+{q:"코카콜라 제로 슈거에 들어 있는 설탕의 양은?",a:["0","없음"],cat:"재밌는",e:"코카콜라 제로 슈거는 설탕 대신 아스파탐, 아세설팜 kali 등 인공 감미료를 사용하여 칼로리 0kcal를 달성했습니다."},
+{q:"사탕수수에서 주로 얻는 당의 종류는?",a:["자당"],cat:"재밌는",e:"사탕수수의 줄기에서 약 14~17%의 자당(수크로스)을 추출합니다. 설탕의 원료이며, 세계 3대 작물 중 하나입니다."},
+{q:"육상에서 가장 빠르게 달리는 동물은?",a:["치타"],cat:"재밌는",e:"치타는 시속 110~120km까지 가속할 수 있습니다. 그러나 지구력이 약해 30초 이상 유지하기 어렵습니다."},
+{q:"코끼리의 임신 기간은?",o:["9개월","15개월","22개월","30개월"],a:2,t:"객관식",cat:"재밌는",e:"코끼리의 임신 기간은 약 22개월(660일)으로, 포유류 중 가장 깁니다. 새끼는 태어날 때 약 100kg입니다."},
+{q:"평생 잠자는 시간은 대략 몇 년인가?",o:["10년","25년","40년","60년"],a:1,t:"객관식",cat:"재밌는",e:"사람은 평균 수면시간 8시간 기준으로, 80년을 살면 약 25년을 잠자며 보냅니다. 인생의 3분의 1은 잠을 자는 셈입니다."},
+{q:"사향고양이의 소화 과정을 거친 커피는?",a:["코피루왁"],cat:"재밌는",e:"인도네시아의 코피루왁은 사향고양이(시벳)가 커피 체리를 먹고 배설한 원두를 가공한 것입니다. 세계에서 가장 비싼 커피 중 하나입니다."},
+{q:"세계에서 면적이 가장 작은 나라는?",a:["바티칸","바티칸시국"],cat:"재밌는",e:"바티칸 시국의 면적은 약 0.44km²(서울 여의도 면적의 약 1/6)입니다. 성 베드로 대성전과 바티칸 박물관이 있습니다."},
+{q:"미겔 데 세르반테스가 쓴 대표적인 소설은?",a:["돈키호테"],cat:"재밌는",e:"1605년 출판된 ' 돈키호테'는 기사 소설을 풍자한 스페인 문학의 걸작입니다. 풍차를 거인이라 착각하는 장면이 유명합니다."},
+{q:"고양이가 몸을 비비는 대표적인 이유는?",a:["영역표시"],cat:"재밌는",e:"고양이는 볼, 이마, 꼬리 등에 냄새샘(피지선)이 있어 몸을 비비며 자기 냄새를 남겨 영역을 표시합니다."},
+{q:"개가 꼬리를 흔드는 주된 이유는?",a:["의사소통"],cat:"재밌는",e:"개는 꼬리를 흔들며 기쁨, 흥분, 불안 등 감정 상태를 표현합니다. 꼬리 흔드는 방향과 속도에 따라 의미가 다릅니다."},
+{q:"성인의 몸속 혈관을 모두 이으면 길이는?",o:["1만km","10만km","100만km","1000만km"],a:1,t:"객관식",cat:"재밌는",e:"인체의 혈관을 모두 연결하면 약 10만 km로, 지구를 2바퀴 반 정도 돌 수 있습니다. 동맥, 정맥, 모세혈관으로 구성됩니다."},
+{q:"사람은 하루에 몇 번 정도 호흡하는가?",o:["5000","2만","5만","10만"],a:1,t:"객관식",cat:"재밌는",e:"성인은 분당 약 12~20회, 하루 약 2만 번 호흡합니다. 하루 공기 섭취량은 약 10,000~15,000 리터입니다."},
+{q:"성체 코끼리의 뇌 무게는?",o:["1","3","5","10"],a:2,t:"객관식",cat:"재밌는",e:"성체 아프리카코끼리의 뇌 무게는 약 5kg으로, 포유류 중 가장 큽니다. 그러나 몸무게(6t)에 비하면 상대적으로 작습니다."},
+{q:"일반적인 구름 한 덩이의 무게는?",o:["5만kg","50만kg","500만kg","5000만kg"],a:1,t:"객관식",cat:"재밌는",e:"구름 한 덩이(적란운 기준)의 무게는 약 50만 kg입니다. 그런데 공기의 부력으로 떠 있을 수 있습니다."},
+{q:"세계에서 가장 많은 나라가 있는 대륙은?",a:["아프리카"],cat:"재밌는",e:"아프리카에는 54개국이 있습니다. 아시아(48개국), 유럽(44개국), 아메리카(35개국)보다 많습니다."},
+{q:"지구상에서 가장 오래된 도시 중 하나는?",a:["다마스커스"],cat:"재밌는",e:"시리아의 수도 다마스커스는 약 1만 년 전부터 사람이 살았습니다. 현재까지도 도시가 유지되고 있어 가장 오래된 수도 중 하나입니다."},
+{q:"세계 인구가 약 80억 명을 돌파한 해는?",o:["2010","2015","2022","2030"],a:2,t:"객관식",cat:"재밌는",e:"UN에 따르면 2022년 11월 15일에 세계 인구가 80억 명을 돌파했습니다. 2011년 70억 명에서 11년 만에 10억 명이 증가했습니다."},
+{q:"발견된 가장 오래된 식용 가능 꿀은 약 몇 년 전 것인가?",o:["300년","3000년","3만년","30만년"],a:1,t:"객관식",cat:"재밌는",e:"조지아의 선사시대 무덤에서 약 3,000년 전 꿀이 발견되었습니다. 꿀은 거의 영구적으로 보존되며, Egyptian 미라에도 사용되었습니다."},
+{q:"에펠탑은 열창창 현상으로 키가 약 몇 cm 커지는가?",o:["5cm","15cm","30cm","50cm"],a:1,t:"객관식",cat:"재밌는",e:"여름철 기온 상승으로 쇳덩이가 팽창하여 에펠탑의 높이가 약 15cm 정도 커집니다. 에펠탑의 높이는 330m(기본)입니다."},
+{q:"일반적인 사람의 뇌가 소비하는 에너지 비율은?",o:["10%","20%","30%","50%"],a:1,t:"객관식",cat:"재밌는",e:"뇌는 체중의 약 2%에 불과하지만, 전체 에너지의 약 20%를 소비합니다. 포도당을 주 연료로 사용합니다."},
+{q:"방콕의 공식 명칭은 총 몇 글자(태국어 기준)인가?",o:["39","79","139","239"],a:2,t:"객관식",cat:"재밌는",e:"방콕의 태국어 공식 명칭은 'ｸﾙﾝﾃﾏﾏｺﾞﾝ아 phéeph▄ Royalsãmák┘sàpheree´sãm投圖rãm' 등 약 139글자입니다. 세계에서 가장 긴 수도 이름입니다."},
+{q:"개미 전체의 무게 합은 인류 전체 무게 합의 약 몇 배인가?",o:["0.1배","0.2배","0.5배","1배"],a:1,t:"객관식",cat:"재밌는",e:"전 세계 개미의 전체 무게는 약 80억 톤, 인류 전체 무게(약 4억 톤)의 약 0.2배(5분의 1) 수준입니다."},
+{q:"페퍼 X의 스코빌 지수는?",o:["100만","169만","269만","369만"],a:2,t:"객관식",cat:"재밌는",e:"페퍼 X는 2023년 기네스북에 공식 등재된 세계 최고 매운 고추로, 스코빌 지수 약 269만 SHU입니다."},
+{q:"일반인이 최고 속도로 달릴 때 평균 시속은?",o:["10km","15km","20km","30km"],a:2,t:"객관식",cat:"재밌는",e:"일반인의 최고 속도는 약 20~25km/h입니다. 우사인 볼트의 최고 속도는 시속 44.72km/h이며, 치타는 시속 110~120km/h입니다."},
+{q:"기린의 목뼈 개수는?",a:["7","7개"],cat:"재밌는",e:"기린의 목은 길지만, 사람과 같은 7개의 경추(목뼈)로 구성되어 있습니다. 다만 각 뼈의 길이가 약 25cm로 매우 깁니다."},
+{q:"카스피해의 면적은 한국 면적의 약 몇 배인가?",o:["2배","4배","8배","10배"],a:1,t:"객관식",cat:"재밌는",e:"카스피해의 면적은 약 37만 1,000km²로, 한국(남한, 약 10만 km²)의 약 4배입니다. 세계 최대의 호수(내해)입니다."},
+{q:"사람이 평생 흘리는 눈물의 양은 약 몇 리터인가?",o:["15리터","35리터","65리터","100리터"],a:2,t:"객관식",cat:"재밌는",e:"사람은 하루 약 2~3회 눈물을 흘리며, 평생 약 65리터의 눈물을 흘립니다. 눈물은 눈을 보호하고 세척하는 역할을 합니다."},
+{q:"문어는 심장을 총 몇 개 가지고 있는가?",o:["1","2","3","4"],a:2,t:"객관식",cat:"재밌는",e:"문어는 심장이 3개입니다. 1개의 '주심장(중앙심장)'과 2개의 '지.branch심장(외심장)'으로, 각 심장은 혈액을 순환시킵니다."},
+{q:"사람이 평생 자라는 손톱의 총 길이는?",o:["1m","2m","4m","8m"],a:2,t:"객관식",cat:"재밌는",e:"손톱은 하루 약 0.1mm, 한 달 약 3mm 자랍니다. 80년을 살면 약 4m의 손톱이 자랍니다."},
+{q:"그린란드상어의 추정 수명은 최고 약 몇 년인가?",o:["100년","200년","500년","1000년"],a:2,t:"객관식",cat:"재밌는",e:"그린란드상어는 약 500년까지 살 수 있는 것으로 추정됩니다. 동물 중 가장 수명이 길며, 150년이 되어야 성숙합니다."},
+{q:"부르즈 할리파의 총 층수는?",o:["103층","133층","163층","203층"],a:2,t:"객관식",cat:"재밌는",e:"아랍에미리트 두바이의 부르즈 할리파는 163층, 높이 828m로 2010년 완공 당시 세계 최고층 건물입니다."},
+{q:"바티칸 시국의 전체 인구는 약 몇 명인가?",o:["200명","500명","800명","1500명"],a:2,t:"객관식",cat:"재밌는",e:"바티칸 시국의 인구는 약 800명으로, 세계에서 가장 인구가 적은 국가입니다. 추기경, 사제, 수사 등이 거주합니다."},
+{q:"간은 몇 %를 절제해도 재생되는가?",o:["30%","50%","70%","90%"],a:2,t:"객관식",cat:"재밌는",e:"간은 인체에서 유일하게 재생되는 장기로, 약 70%를 절제해도 원래 크기로 다시 자랍니다. 간 이식 시에도 기증자의 간이 재생됩니다."},
+{q:"그린란드 북동부 국립공원의 면적은 한국의 약 몇 배인가?",o:["5배","10배","20배","50배"],a:1,t:"객관식",cat:"재밌는",e:"약 97만 2,000km²로, 한국(남한) 면적의 약 10배입니다. 세계에서 가장 큰 국립공원 중 하나입니다."},
+{q:"달 표면에서 발자국이 유지되는 기간은?",o:["100만년","1000만년","1억년","10억년"],a:2,t:"객관식",cat:"재밌는",e:"달에는 대기와 바람이 없어 발자국이 풍화되지 않습니다. 약 1억 년 이상 유지되는 것으로 추정됩니다."},
+{q:"평생 방귀로 배출하는 가스의 총량은 약 몇 리터인가?",o:["5000","1.5만","3.5만","5만"],a:2,t:"객관식",cat:"재밌는",e:"사람은 하루 약 14회 방귀를 뀌며, 평생 약 3만 5,000리터의 가스를 배출합니다. 주성분은 질소, 수소, 이산화탄소입니다."},
+{q:"남극에서 발견된 가장 낮은 기록 기온은?",o:["-62도","-75도","-89도","-98도"],a:2,t:"객관식",cat:"재밌는",e:"1983년 7월 21일 남극 러트비츠 기지에서 마이너스 89.2°C가 기록되었습니다. 지구상 가장 낮은 공식 기온입니다."},
+{q:"335년 전쟁 동안 전사한 사람 수는?",o:["0명","10명","100명","1000명"],a:0,t:"객관식",cat:"재밌는",e:"1651년 네덜란드-섬나라 전쟁은 335년간 지속된 세계에서 가장 긴 전쟁으로, 단 한 명의 전사자도 없는 것으로 기록됩니다."},
+{q:"하루 동안 지구 전체에 내리는 비의 총량은 약 몇 억 톤인가?",o:["1000억","1만억","10만억","100만억"],a:1,t:"객관식",cat:"재밌는",e:"하루 동안 지구 전체에 약 1조(1만억) 톤의 비가 내립니다. 이는 피라미드 약 5,500개 무게에 해당합니다."},
+{q:"인간의 눈이 구분할 수 있는 색상의 종류는?",o:["100만","500만","1000만","5000만"],a:2,t:"객관식",cat:"재밌는",e:"인간의 눈은 약 1,000만 가지 색상을 구분할 수 있습니다. 원추세포 3종(빨강, 초록, 파랑)의 조합으로 색상을 인식합니다."},
+{q:"사막여우의 귀 길이가 몸길이의 약 몇 %에 달하는가?",o:["10%","20%","30%","50%"],a:2,t:"객관식",cat:"재밌는",e:"사막여우의 귀는 몸길이의 약 30%로 매우 큽니다. 이는 체온을 낮추는 냉각기 역할과 먹잇감의 소리를 멀리 듣는 역할을 합니다."},
+{q:"소는 위를 총 몇 개 가지고 있는가?",o:["2","3","4","5"],a:2,t:"객관식",cat:"재밌는",e:"소는 반추동물로, 위를 4개 가지고 있습니다( 베어 위, 그물 위, 겹 Curriculum 위, 주름 위). 풀을 소화시키기 위해 여러 단계를 거칩니다."},
+{q:"콜라 슈퍼딥 시찰정의 깊이는 약 몇 미터인가?",o:["5000m","8000m","12262m","15000m"],a:2,t:"객관식",cat:"재밌는",e:"러시아 콜라 반도에 있는 이 우물은 약 12,262m 깊이로, 지구 육지에서 가장 깊은 우물입니다. 1989년에 완공되었습니다."},
+{q:"지구의 공전 속도는 시속 약 몇 km인가?",o:["1.1만km","11만km","110만km","1100만km"],a:1,t:"객관식",cat:"재밌는",e:"지구의 공전 속도는 시속 약 10만 7,000km(약 11만 km)입니다. 이 속도로 태양 주위를 한 바퀴 도는 데 365일이 걸립니다."},
+{q:"바나나는 식물학적으로 무엇으로 분류되는가?",a:["풀","풀줄기"],cat:"재밌는",e:"바나나는 겉씨식물로, 나무가 아닌 '풀(초본식물)'입니다. 줄기가 수직으로 자라 나무처럼 보이지만, 실제 줄기는 잎집으로 된 위조(僞莖)입니다."},
+{q:"마라톤의 거리는?",o:["21.097","42.195","45","50"],a:1,t:"객관식",cat:"재밌는",e:"마라톤은 42.195km입니다. 고대 그리스의 전령 페이디피데스에서 유래했으며, 1908년 런던 올림픽에서 공식 거리로 확정되었습니다."},
+{q:"1인치는 몇 cm인가?",o:["1.54","2.54","3.54","5.08"],a:1,t:"객관식",cat:"재밌는",e:"1인치(inch)는 정확히 2.54cm입니다. 인치는 영국의 길이 단위로, 엄지손가락의 폭에서 유래했습니다."},
+{q:"이순신 장군이 사용한 해전 전술 이름은?",a:["학익진"],cat:"재밌는",e:"학익진은 학이 날개를 편 형태의 전법으로, 양날개로 적을 포위하여 공격하는 해전 전술입니다. 한산도대첩에서 결정적으로 사용되었습니다."}
+];
+
+let currentQuiz=[],currentIdx=0,score=0,answered=false,startTime,timerInterval,timeLeft=1800,nickname='',selectedOption=-1;
+
+function init(){showScreen('screen-start')}
+window.goStart=function(){showScreen('screen-start')};
+window.showScreen=function(id){document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));document.getElementById(id).classList.remove('hidden')};
+window.showRankingOnly=function(){showScreen('screen-ranking');loadRanking('ranking-standalone-wrap',null)};
+
+window.startQuiz=function(){
+  nickname=document.getElementById('nickname').value.trim();
+  if(!nickname){alert('닉네임을 입력해주세요.');return}
+  const cats={역사:[],과학:[],재밌는:[]};
+  allQuestions.forEach(q=>{if(cats[q.cat])cats[q.cat].push(q)});
+  Object.values(cats).forEach(a=>shuffle(a));
+  currentQuiz=[];
+  Object.values(cats).forEach(a=>{currentQuiz.push(...a.slice(0,Math.ceil(32/3)))});
+  currentQuiz=currentQuiz.slice(0,32);
+  shuffle(currentQuiz);
+  currentIdx=0;score=0;answered=false;selectedOption=-1;timeLeft=1800;startTime=Date.now();
+  showScreen('screen-quiz');renderQuestion();startTimer();
+};
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}}
+
+function startTimer(){
+  clearInterval(timerInterval);
+  const el=document.getElementById('timer');el.classList.remove('danger');
+  timerInterval=setInterval(()=>{
+    timeLeft--;
+    const m=Math.floor(Math.max(0,timeLeft)/60),s=Math.max(0,timeLeft)%60;
+    el.textContent=`${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    if(timeLeft<=60)el.classList.add('danger');
+    if(timeLeft<=0){clearInterval(timerInterval);finishQuiz()}
+  },1000);
+}
+
+function renderQuestion(){
+  const q=currentQuiz[currentIdx],total=currentQuiz.length,isObj=q.t==='객관식';
+  answered=false;selectedOption=-1;
+  document.getElementById('q-counter').textContent=`${currentIdx+1} / ${total}`;
+  document.getElementById('progress-fill').style.width=`${(currentIdx/total)*100}%`;
+  let badge='';
+  if(q.cat==='역사')badge='<span class="q-category cat-history">역사</span>';
+  else if(q.cat==='과학')badge='<span class="q-category cat-science">과학</span>';
+  else badge='<span class="q-category cat-fun">재밌는</span>';
+  document.getElementById('q-category-badge').innerHTML=badge;
+  document.getElementById('question-text').textContent=q.q;
+  const input=document.getElementById('answer-input'),opts=document.getElementById('options-container');
+  if(isObj){
+    input.classList.add('hidden');opts.classList.remove('hidden');
+    opts.innerHTML='';
+    q.o.forEach((o,i)=>{
+      const btn=document.createElement('button');
+      btn.className='option-btn';btn.textContent=o;
+      btn.onclick=function(){
+        if(answered)return;
+        opts.querySelectorAll('.option-btn').forEach(b=>b.classList.remove('selected'));
+        btn.classList.add('selected');selectedOption=i;
+      };
+      opts.appendChild(btn);
+    });
+  }else{
+    opts.classList.add('hidden');input.classList.remove('hidden');
+    input.value='';input.className='answer-input';input.disabled=false;input.focus();
+  }
+  document.getElementById('answer-result').textContent='';
+  document.getElementById('answer-result').className='answer-result';
+  document.getElementById('btn-submit').classList.remove('hidden');
+  document.getElementById('btn-next').classList.add('hidden');
+  document.getElementById('explain-box').classList.add('hidden');
+  input.onkeydown=function(e){if(e.key==='Enter'&&!answered)submitAnswer()};
+}
+
+window.submitAnswer=function(){
+  if(answered)return;
+  const q=currentQuiz[currentIdx],isObj=q.t==='객관식';
+  if(isObj){
+    if(selectedOption===-1){alert('보기를 선택해주세요.');return}
+    answered=true;
+    const btns=document.getElementById('options-container').querySelectorAll('.option-btn');
+    btns.forEach(b=>{b.style.pointerEvents='none'});
+    if(selectedOption===q.a){
+      btns[selectedOption].classList.add('correct');
+      document.getElementById('answer-result').textContent='정답!';
+      document.getElementById('answer-result').className='answer-result is-correct';
+      score++;
+    }else{
+      btns[selectedOption].classList.add('wrong');
+      btns[q.a].classList.add('correct');
+      document.getElementById('answer-result').textContent=`오답! 정답: ${q.o[q.a]}`;
+      document.getElementById('answer-result').className='answer-result is-wrong';
+    }
+  }else{
+    const input=document.getElementById('answer-input'),userAns=input.value.trim();
+    if(!userAns){alert('답변을 입력해주세요.');return}
+    answered=true;
+    if(checkAnswer(userAns,q.a)){
+      input.classList.add('correct');
+      document.getElementById('answer-result').textContent='정답!';
+      document.getElementById('answer-result').className='answer-result is-correct';
+      score++;
+    }else{
+      input.classList.add('wrong');
+      document.getElementById('answer-result').textContent=`오답! 정답: ${q.a[0]}`;
+      document.getElementById('answer-result').className='answer-result is-wrong';
+    }
+    input.disabled=true;
+  }
+  document.getElementById('btn-submit').classList.add('hidden');
+  document.getElementById('btn-next').classList.remove('hidden');
+  document.getElementById('btn-next').textContent=currentIdx<currentQuiz.length-1?'다음 문제':'결과 보기';
+  const eb=document.getElementById('explain-box');
+  if(q.e){eb.innerHTML='<strong>해설</strong> '+q.e;eb.classList.remove('hidden')}else{eb.classList.add('hidden')}
+};
+
+window.nextQuestion=function(){currentIdx++;if(currentIdx>=currentQuiz.length)finishQuiz();else renderQuestion()};
+
+async function finishQuiz(){
+  clearInterval(timerInterval);
+  const elapsed=Math.floor((Date.now()-startTime)/1000),total=currentQuiz.length,pct=Math.round((score/total)*100);
+  document.getElementById('result-score').textContent=pct;
+  document.getElementById('result-correct').textContent=score;
+  document.getElementById('result-wrong').textContent=total-score;
+  document.getElementById('result-time').textContent=elapsed;
+  let title='';
+  if(pct>=90)title='대단합니다!';
+  else if(pct>=70)title='훌륭합니다!';
+  else if(pct>=50)title='보통이에요';
+  else title='아쉬워요!';
+  document.getElementById('result-title').textContent=title;
+  showScreen('screen-result');
+  if(firebaseReady){
+    try{
+      const snap=await db.ref('rankings').orderByChild('nickname').equalTo(nickname).once('value');
+      if(snap.exists()){
+        snap.forEach(child=>{
+          const old=child.val();
+          if(pct>old.score||(pct===old.score&&elapsed<old.time)){
+            child.ref.update({score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
+          }
+        });
+      }else{
+        db.ref('rankings').push({nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
+      }
+    }catch(e){console.warn('랭킹 저장 실패:',e)}
+  }
+  setTimeout(()=>loadRanking('ranking-result-wrap',pct),500);
+}
+
+async function loadRanking(containerId,myScore){
+  const wrap=document.getElementById(containerId);
+  wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
+  try{
+    const snap=await db.ref('rankings').orderByChild('score').limitToLast(50).once('value');
+    let data=[];snap.forEach(c=>{data.push(c.val())});data.reverse();
+    if(data.length===0){wrap.innerHTML='<p style="color:#aaa;padding:20px">아직 랭킹 데이터가 없습니다</p>';return}
+    let html='<table class="ranking-table"><thead><tr><th>#</th><th>닉네임</th><th>점수</th><th>정답</th><th>시간</th></tr></thead><tbody>';
+    data.forEach((r,i)=>{
+      const isMe=myScore!==null&&r.nickname===nickname&&r.score===myScore;
+      const medal=i===0?'1st':i===1?'2nd':i===2?'3rd':`${i+1}`;
+      const tm=Math.floor(r.time/60),ts=r.time%60;
+      html+=`<tr class="${isMe?'my-rank':''}"><td class="rank-medal">${medal}</td><td class="rank-name">${esc(r.nickname)}</td><td class="rank-score">${r.score}점</td><td>${r.correct}/${r.total}</td><td class="rank-time">${tm}분 ${ts}초</td></tr>`;
+    });
+    html+='</tbody></table>';wrap.innerHTML=html;
+  }catch(e){wrap.innerHTML='<p style="color:#aaa;padding:20px">랭킹 불러오기 실패</p>'}
+}
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+init();
+</script>
+</body>
+</html>
