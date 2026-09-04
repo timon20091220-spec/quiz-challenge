@@ -72,6 +72,11 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .loading{display:flex;justify-content:center;align-items:center;padding:40px}
 .spinner{width:40px;height:40px;border:4px solid #333;border-top-color:#ffd200;border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+.review-item{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.07);line-height:1.6;font-size:.92em}
+.review-item:last-child{border-bottom:none}
+.review-item .rq{font-weight:600;color:#fff;margin-bottom:4px}
+.review-item .ra{color:#4caf50;font-weight:600}
+.review-item .re{color:#aaa;font-size:.85em;margin-top:4px;line-height:1.5}
 @media(max-width:500px){.logo{font-size:2em}.question-text{font-size:1.05em}.score-details{grid-template-columns:1fr}.quiz-header{flex-direction:column;align-items:flex-start}.option-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -93,6 +98,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
     <div class="quiz-header">
       <span id="q-counter" class="q-num"></span>
       <span id="q-category-badge"></span>
+      <span id="q-timer" class="timer" style="font-size:1.1em;margin-right:10px">30</span>
       <span id="timer" class="timer">30:00</span>
     </div>
     <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
@@ -120,6 +126,10 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
         <div class="score-item"><div class="val" style="color:#f44336" id="result-wrong">0</div><div class="lbl">오답</div></div>
         <div class="score-item"><div class="val" style="color:#ffd200" id="result-time">0</div><div class="lbl">소요시간(초)</div></div>
       </div>
+    </div>
+    <div id="review-wrap" class="ranking-card hidden" style="text-align:left">
+      <h3 style="margin-bottom:15px">오답 문제 확인</h3>
+      <div id="review-list"></div>
     </div>
     <div class="ranking-card">
       <h3 style="margin-bottom:15px">실시간 랭킹</h3>
@@ -291,7 +301,7 @@ const allQuestions=[
 {q:"이순신 장군이 사용한 해전 전술 이름은?",a:["학익진"],cat:"재밌는",e:"학익진은 학이 날개를 편 형태의 전법으로, 양날개로 적을 포위하여 공격하는 해전 전술입니다. 한산도대첩에서 결정적으로 사용되었습니다."}
 ];
 
-let currentQuiz=[],currentIdx=0,score=0,answered=false,startTime,timerInterval,timeLeft=1800,nickname='',selectedOption=-1;
+let currentQuiz=[],currentIdx=0,score=0,answered=false,startTime,timerInterval,timeLeft=1800,nickname='',selectedOption=-1,qTimerInterval=null;
 
 function init(){showScreen('screen-start')}
 window.goStart=function(){showScreen('screen-start')};
@@ -308,7 +318,7 @@ window.startQuiz=function(){
   Object.values(cats).forEach(a=>{currentQuiz.push(...a.slice(0,Math.ceil(32/3)))});
   currentQuiz=currentQuiz.slice(0,32);
   shuffle(currentQuiz);
-  currentIdx=0;score=0;answered=false;selectedOption=-1;timeLeft=1800;startTime=Date.now();
+  currentIdx=0;score=0;answered=false;selectedOption=-1;timeLeft=1800;startTime=Date.now();clearInterval(qTimerInterval);
   showScreen('screen-quiz');renderQuestion();startTimer();
 };
 
@@ -326,11 +336,37 @@ function startTimer(){
   },1000);
 }
 
+function startQTimer(){
+  clearInterval(qTimerInterval);
+  const qel=document.getElementById('q-timer');
+  let qt=30;
+  qel.textContent=qt;qel.classList.remove('danger');
+  qTimerInterval=setInterval(()=>{
+    qt--;
+    qel.textContent=qt;
+    if(qt<=5)qel.classList.add('danger');
+    if(qt<=0){clearInterval(qTimerInterval);qel.textContent='0';handleTimeout()}
+  },1000);
+}
+function handleTimeout(){
+  if(answered)return;
+  const q=currentQuiz[currentIdx],isObj=q.t==='객관식';
+  answered=true;q.userWrong=true;score=score;
+  document.getElementById('answer-result').textContent='시간초과!';
+  document.getElementById('answer-result').className='answer-result is-wrong';
+  if(!isObj){const input=document.getElementById('answer-input');input.disabled=true}
+  document.getElementById('btn-submit').classList.add('hidden');
+  document.getElementById('btn-next').classList.remove('hidden');
+  document.getElementById('btn-next').textContent=currentIdx<currentQuiz.length-1?'다음 문제':'결과 보기';
+  document.getElementById('explain-box').classList.add('hidden');
+}
+
 function renderQuestion(){
   const q=currentQuiz[currentIdx],total=currentQuiz.length,isObj=q.t==='객관식';
-  answered=false;selectedOption=-1;
+  answered=false;selectedOption=-1;q.userWrong=false;
   document.getElementById('q-counter').textContent=`${currentIdx+1} / ${total}`;
   document.getElementById('progress-fill').style.width=`${(currentIdx/total)*100}%`;
+  startQTimer();
   let badge='';
   if(q.cat==='역사')badge='<span class="q-category cat-history">역사</span>';
   else if(q.cat==='과학')badge='<span class="q-category cat-science">과학</span>';
@@ -365,6 +401,7 @@ function renderQuestion(){
 
 window.submitAnswer=function(){
   if(answered)return;
+  clearInterval(qTimerInterval);
   const q=currentQuiz[currentIdx],isObj=q.t==='객관식';
   if(isObj){
     if(selectedOption===-1){alert('보기를 선택해주세요.');return}
@@ -379,8 +416,9 @@ window.submitAnswer=function(){
     }else{
       btns[selectedOption].classList.add('wrong');
       btns[q.a].classList.add('correct');
-      document.getElementById('answer-result').textContent=`오답! 정답: ${q.o[q.a]}`;
+      document.getElementById('answer-result').textContent='오답!';
       document.getElementById('answer-result').className='answer-result is-wrong';
+      q.userWrong=true;
     }
   }else{
     const input=document.getElementById('answer-input'),userAns=input.value.trim();
@@ -393,8 +431,9 @@ window.submitAnswer=function(){
       score++;
     }else{
       input.classList.add('wrong');
-      document.getElementById('answer-result').textContent=`오답! 정답: ${q.a[0]}`;
+      document.getElementById('answer-result').textContent='오답!';
       document.getElementById('answer-result').className='answer-result is-wrong';
+      q.userWrong=true;
     }
     input.disabled=true;
   }
@@ -402,13 +441,13 @@ window.submitAnswer=function(){
   document.getElementById('btn-next').classList.remove('hidden');
   document.getElementById('btn-next').textContent=currentIdx<currentQuiz.length-1?'다음 문제':'결과 보기';
   const eb=document.getElementById('explain-box');
-  if(q.e){eb.innerHTML='<strong>해설</strong> '+q.e;eb.classList.remove('hidden')}else{eb.classList.add('hidden')}
+  if(q.userWrong){eb.classList.add('hidden')}else if(q.e){eb.innerHTML='<strong>해설</strong> '+q.e;eb.classList.remove('hidden')}else{eb.classList.add('hidden')}
 };
 
 window.nextQuestion=function(){currentIdx++;if(currentIdx>=currentQuiz.length)finishQuiz();else renderQuestion()};
 
 async function finishQuiz(){
-  clearInterval(timerInterval);
+  clearInterval(timerInterval);clearInterval(qTimerInterval);
   const elapsed=Math.floor((Date.now()-startTime)/1000),total=currentQuiz.length,pct=Math.round((score/total)*100);
   document.getElementById('result-score').textContent=pct;
   document.getElementById('result-correct').textContent=score;
@@ -421,16 +460,23 @@ async function finishQuiz(){
   else title='아쉬워요!';
   document.getElementById('result-title').textContent=title;
   showScreen('screen-result');
+  const wrongQ=currentQuiz.filter(q=>q.userWrong);
+  const rw=document.getElementById('review-wrap');
+  if(wrongQ.length>0){
+    rw.classList.remove('hidden');
+    let html='';
+    wrongQ.forEach(q=>{
+      const ans=q.t==='객관식'?q.o[q.a]:q.a[0];
+      html+=`<div class="review-item"><div class="rq">${esc(q.q)}</div><div class="ra">정답: ${esc(ans)}</div>${q.e?`<div class="re">${esc(q.e)}</div>`:''}</div>`;
+    });
+    document.getElementById('review-list').innerHTML=html;
+  }else{rw.classList.add('hidden')}
   if(firebaseReady){
     try{
       const snap=await db.ref('rankings').orderByChild('nickname').equalTo(nickname).once('value');
       if(snap.exists()){
-        snap.forEach(child=>{
-          const old=child.val();
-          if(pct>old.score||(pct===old.score&&elapsed<old.time)){
-            child.ref.update({score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
-          }
-        });
+        // 이미 같은 닉네임이 기록되어 있으면 무시 (첫 번째 것만 기록 유지)
+        console.log('이미 랭킹에 등록된 닉네임입니다. 첫 기록이 유지됩니다.');
       }else{
         db.ref('rankings').push({nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
       }
