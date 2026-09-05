@@ -837,8 +837,11 @@ function renderLockButtons(){
 }
 window.toggleQuizLock=function(qid){
   if(!isAdmin){alert('관리자만 사용할 수 있습니다.');return}
-  const next=isQuizLocked(qid)?'open':'closed';
-  fsSet('settings','locks',{[qid]:next},{merge:true});
+  const cur=window.__qLocks||{};
+  const norm=k=>(cur[k]==='closed'?'closed':'open');
+  const locks={common:norm('common'),ajaeggae:norm('ajaeggae'),history:norm('history')};
+  locks[qid]=locks[qid]==='closed'?'open':'closed';
+  fsSet('settings','locks',locks);
 };
 window.openQuizLobby=function(qid){
   curQuizId=qid||'common';
