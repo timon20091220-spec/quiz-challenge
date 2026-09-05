@@ -837,11 +837,19 @@ function renderLockButtons(){
 }
 window.toggleQuizLock=function(qid){
   if(!isAdmin){alert('관리자만 사용할 수 있습니다.');return}
-  const cur=window.__qLocks||{};
-  const norm=k=>(cur[k]==='closed'?'closed':'open');
-  const locks={common:norm('common'),ajaeggae:norm('ajaeggae'),history:norm('history')};
-  locks[qid]=locks[qid]==='closed'?'open':'closed';
-  fsSet('settings','locks',locks);
+  if(!fsReady)return;
+  const ref=fs.collection('settings').doc('locks');
+  fs.runTransaction(async tx=>{
+    const snap=await tx.get(ref);
+    const cur=snap.exists?(snap.data()||{}):{};
+    const norm=k=>(cur[k]==='closed'?'closed':'open');
+    const locks={common:norm('common'),ajaeggae:norm('ajaeggae'),history:norm('history')};
+    locks[qid]=locks[qid]==='closed'?'open':'closed';
+    tx.set(ref,locks);
+    window.__qLocks=locks;
+    renderQuizButtons();
+    renderLockButtons();
+  }).catch(()=>{});
 };
 window.openQuizLobby=function(qid){
   curQuizId=qid||'common';
