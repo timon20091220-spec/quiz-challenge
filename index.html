@@ -123,7 +123,8 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .player-medal{font-size:1.15em}
 .detail-back{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px}
 .detail-back h3{color:#ffd200}
-.session-tag{margin:18px 0 8px;font-size:.85em;color:#aaa;display:flex;align-items:center;gap:10px}
+.session-tag{margin:18px 0 8px;font-size:.85em;color:#aaa;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.session-tag .chev{color:#ffd200;font-size:.85em}
 .session-tag::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
 .quest-form{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:22px;margin-bottom:18px}
 .qf-label{display:block;text-align:left;font-size:.82em;color:#aaa;margin:12px 0 6px}
@@ -800,7 +801,10 @@ window.showPlayerDetail=async function(i){
     let html=`<div class="detail-back"><div><h3>${esc(nick)} · 총 ${data.length}문제 · ${attempts.length}회 시도</h3></div><button class="btn btn-secondary" onclick="loadPlayers()">뒤로</button></div>`;
     attempts.forEach((list,ai)=>{
       const t=new Date(list[0].val.date);
-      html+=`<div class="session-tag">${ai+1}차 시도 <span style="color:#888;font-size:.85em">${t.getFullYear()}.${pad2(t.getMonth()+1)}.${pad2(t.getDate())} ${pad2(t.getHours())}:${pad2(t.getMinutes())}</span></div>`;
+      const correctCnt=list.reduce((n,r)=>n+(r.val.correct?1:0),0);
+      const score=Math.round(correctCnt/list.length*100);
+      html+=`<div class="session-tag" onclick="toggleAttempt(this)"><span class="chev">▾</span>${ai+1}차 시도 · ${score}점 (${correctCnt}/${list.length}) <span style="color:#888;font-size:.85em">${t.getFullYear()}.${pad2(t.getMonth()+1)}.${pad2(t.getDate())} ${pad2(t.getHours())}:${pad2(t.getMinutes())}</span></div>`;
+      html+=`<div class="attempt-body">`;
       list.forEach(r=>{
         const v=r.val;
         const got=v.correct?`<span class="ans-got">${esc(v.userAns)}</span>`:`<span class="ans-got wrong">${esc(v.userAns||'(무응답)')} <span style="color:#aaa;font-size:.85em">→ ${esc(v.correctAnswer)}</span></span>`;
@@ -813,10 +817,18 @@ window.showPlayerDetail=async function(i){
           <div class="ans-user">${got}</div>
         </div>`;
       });
+      html+=`</div>`;
     });
     det.innerHTML=html;
   }catch(e){det.innerHTML='<p style="color:#aaa;padding:20px">답안 기록 불러오기 실패</p>'}
 }
+window.toggleAttempt=function(tag){
+  const body=tag.nextElementSibling;
+  if(!body)return;
+  body.classList.toggle('hidden');
+  const chev=tag.querySelector('.chev');
+  if(chev)chev.textContent=chev.textContent==='▾'?'▸':'▾';
+};
 
 window.showAnalysis=function(){
   showScreen('screen-analysis');
