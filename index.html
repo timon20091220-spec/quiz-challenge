@@ -1387,7 +1387,7 @@ async function loadRanking(containerId,myScore,qid){
   try{
 const val=await restJson('/'+rankNodePath(qid));
     let data=[];
-    if(val)Object.keys(val).forEach(k=>data.push(val[k]));
+    if(val)Object.keys(val).forEach(k=>{const v=val[k];if(v&&typeof v==='object'&&typeof v.score==='number')data.push(v)});
     const seen={};data.forEach(r=>{const e=seen[r.nickname];if(!e||((r.date||0)<(e.date||0)))seen[r.nickname]=r});
     data=Object.values(seen);
     data.sort((a,b)=>(b.score-a.score)||(a.time-b.time));
@@ -1418,7 +1418,7 @@ async function loadPlayers(qid){
   try{
 const val=await restJson('/'+rankNodePath(qid));
     let data=[];
-    if(val)Object.keys(val).forEach(k=>data.push({key:k,val:val[k]}));
+    if(val)Object.keys(val).forEach(k=>{const v=val[k];if(v&&typeof v==='object'&&typeof v.score==='number')data.push({key:k,val:v})});
     const seen={};data.forEach(r=>{const e=seen[r.val.nickname];if(!e||((r.val.date||0)<(e.val.date||0)))seen[r.val.nickname]=r});
     data=Object.values(seen);
     data.sort((a,b)=>(b.val.score-a.val.score)||(a.val.time-b.val.time));
