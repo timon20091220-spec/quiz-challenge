@@ -117,7 +117,9 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .modal-btns .btn{margin:0;padding:12px 30px}
 .modal-card input[type=email]{letter-spacing:0}
 .quiz-menu-item{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;width:min(92%,430px);transition:border .2s}
-.quiz-menu-item:hover{border-color:rgba(255,210,0,.5)}
+.quiz-menu-item:hover{border-color:rgba(255,210,0,.5);background:rgba(255,210,0,.06)}
+.qq-arrow{color:#ffd200;font-size:1.2em}
+.rec-hd{text-align:center;margin-bottom:12px;font-size:.95em}
 .rank-title{font-weight:800;font-size:1.15em;color:#ffd200;margin:8px 0 16px;text-align:center}
 .analysis-select{background:#0f0c29;color:#fff;border:2px solid #444;border-radius:10px;padding:10px 14px;font-size:1em;outline:none;cursor:pointer}
 .analysis-select:focus{border-color:#ffd200}
@@ -161,27 +163,41 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 </head>
 <body>
 <div class="container">
-  <div id="screen-start" class="screen hidden">
+<div id="screen-start" class="screen hidden">
     <div class="logo">퀴즈챌린지</div>
     <div id="auth-pre" style="margin-top:18px">
       <button class="btn btn-primary" style="margin:6px 4px" onclick="googleLogin()">Google로 로그인</button>
       <button class="btn btn-secondary" style="margin:6px 4px" onclick="openEmailLogin()">이메일 로그인</button>
     </div>
-    <div id="auth-post" class="hidden" style="margin-top:18px">
-      <p style="color:#aaa;font-size:.9em;margin-bottom:10px;word-break:break-all"><span id="auth-email"></span> <span id="auth-badge"></span></p>
+    <div id="auth-post" class="hidden" style="margin-top:14px">
+      <p style="color:#aaa;font-size:.9em;margin-bottom:8px;word-break:break-all"><span id="auth-email"></span> <span id="auth-badge"></span></p>
       <button class="btn btn-secondary" style="padding:8px 16px;font-size:.85em" onclick="logout()">로그아웃</button>
     </div>
-    <div id="quiz-menu" class="hidden" style="margin-top:20px">
-      <div id="quiz-btns" style="display:flex;flex-direction:column;align-items:center;gap:10px"></div>
-      <div id="nick-wrap" class="hidden" style="margin-top:20px">
+    <div id="quiz-menu" class="hidden" style="margin-top:18px">
+      <div id="nick-wrap" class="hidden" style="margin-bottom:20px">
         <div class="input-group" style="text-align:center">
           <label for="nickname">닉네임</label>
-          <input type="text" id="nickname" placeholder="닉네임을 입력하세요" maxlength="20" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
+          <input type="text" id="nickname" placeholder="닉네임을 입력하세요" maxlength="20" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" onblur="saveNickname()">
         </div>
       </div>
-      <div id="admin-btn-wrap" class="hidden" style="margin-top:18px">
-        <button class="btn btn-secondary" onclick="showAnalysis()">관리자 · 문항 분석</button>
+      <div id="quiz-btns" style="display:flex;flex-direction:column;align-items:center;gap:10px"></div>
+      <div style="display:flex;justify-content:center;gap:10px;margin-top:18px;flex-wrap:wrap">
+        <button class="btn btn-secondary" style="margin:0;padding:10px 18px;font-size:.9em" onclick="showMyRecords()">내 기록</button>
+        <button class="btn btn-secondary" style="margin:0;padding:10px 18px;font-size:.9em" onclick="showRankingOnly()">랭킹 보기</button>
+        <button id="admin-btn" class="btn btn-secondary hidden" style="margin:0;padding:10px 18px;font-size:.9em" onclick="showAnalysis()">관리자 · 문항 분석</button>
       </div>
+    </div>
+  </div>
+  <div id="screen-quiz-lobby" class="screen hidden">
+    <div class="logo" id="ql-logo" style="font-size:2.4em">상식 퀴즈 챌린지</div>
+    <p id="ql-desc" style="color:#aaa;margin:10px 0 6px;line-height:1.6"></p>
+    <p id="ql-user" style="color:#ffd200;font-weight:700;margin-bottom:22px"></p>
+    <button class="btn btn-primary" onclick="startQuiz()">퀴즈 시작</button>
+    <div style="margin-top:6px">
+      <button class="btn btn-secondary" onclick="showRankingOnly(curQuizId)">이 퀴즈 랭킹 보기</button>
+    </div>
+    <div style="margin-top:22px">
+      <button class="btn btn-secondary" style="padding:8px 16px;font-size:.85em" onclick="goStart()">퀴즈챌린지 로비로</button>
     </div>
   </div>
   <div id="screen-quiz" class="screen hidden">
@@ -226,11 +242,24 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
       <div id="ranking-result-wrap"><div class="loading"><div class="spinner"></div></div></div>
     </div>
   </div>
-  <div id="screen-ranking" class="screen hidden">
+<div id="screen-ranking" class="screen hidden">
     <div class="ranking-card">
       <h2 style="margin-bottom:5px">전체 랭킹</h2>
-      <p style="color:#aaa;margin-bottom:20px;font-size:.9em">상위 50명</p>
+      <div style="text-align:center;margin:12px 0">
+        <select id="rank-qsel" class="analysis-select" onchange="rankQuizChanged()"></select>
+      </div>
+      <p style="color:#aaa;margin-bottom:12px;font-size:.9em">상위 50명</p>
       <div id="ranking-standalone-wrap"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+    <div style="text-align:center;margin-top:15px">
+      <button class="btn btn-secondary" onclick="goStart()">돌아가기</button>
+    </div>
+  </div>
+  <div id="screen-records" class="screen hidden">
+    <div class="ranking-card">
+      <h2 id="records-title" style="margin-bottom:5px">내 기록</h2>
+      <p id="records-sub" style="color:#aaa;margin-bottom:15px;font-size:.9em"></p>
+      <div id="records-wrap"><div class="loading"><div class="spinner"></div></div></div>
     </div>
     <div style="text-align:center;margin-top:15px">
       <button class="btn btn-secondary" onclick="goStart()">돌아가기</button>
@@ -337,81 +366,80 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
 const firebaseConfig={apiKey:"AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k",authDomain:"quiz-ranking-6cb9f.firebaseapp.com",databaseURL:"https://quiz-ranking-6cb9f-default-rtdb.firebaseio.com",projectId:"quiz-ranking-6cb9f",storageBucket:"quiz-ranking-6cb9f.firebasestorage.app",messagingSenderId:"488270918333",appId:"1:488270918333:web:93f4612335b58780b43dd4"};
 const ADMIN_PW='triuytje123!';
-let db,firebaseReady=false;try{firebase.initializeApp(firebaseConfig);db=firebase.database();firebaseReady=true}catch(e){console.warn("파이어베이스 연결 실패:",e)}
+let db,fs,fsReady=false,firebaseReady=false;try{firebase.initializeApp(firebaseConfig);db=firebase.database();try{fs=firebase.firestore();fsReady=true}catch(e){console.warn("파이어스토어 연결 실패:",e)}firebaseReady=true}catch(e){console.warn("파이어베이스 연결 실패:",e)}
 
 const ADMIN_EMAIL='timon20091220@gmail.com';
 const QUIZ_LIST=[
-  {id:'common',title:'상식 퀴즈',desc:'랜덤 32문제 (주관식+객관식)'},
-  {id:'ajaeggae',title:'아재개그 퀴즈',desc:'웃음 참기 대결, 4지선다'},
-  {id:'history',title:'역사 퀴즈',desc:'한국사&세계사 4지선다'}
+  {id:'common',title:'상식 퀴즈 챌린지',desc:'랜덤 32문제 · 주관식+객관식 혼합'},
+  {id:'ajaeggae',title:'아재개그 퀴즈',desc:'주관식 28문제 · 웃음 참기 대결'},
+  {id:'history',title:'역사 퀴즈',desc:'랜덤 32문제 · 주관식+객관식 혼합'}
 ];
 const ajaeggaeQuestions=[
-{q:"소가 웃으면?",o:["우하하","음메","하이요","꿀꿀"],a:0,t:"객관식",cat:"재밌는",e:"소는 '무우~'라고 우니까 웃으면 우하하!"},
-{q:"바다가 부끄러우면?",o:["파도가 출렁","온몸이 빨개진다","모래가 숨는다","잔잔해진다"],a:1,t:"객관식",cat:"재밌는",e:"바다가 부끄러우면 온몸이 빨개지고 '해변'이라구요. 바다가 부끄러우면(바다빠져? no) 정답은 온몸이 빨개진다!"},
-{q:"전화기를 물에 빠뜨리면?",o:["수화기","핸드폰","물컹물컹","초록색"],a:0,t:"객관식",cat:"재밌는",e:"집 전화기라서 '수화기'(기(機)가 물에 빠지면 수화기!)"},
-{q:"소가 전화를 하면?",o:["거의 없다","무우우~","야옹","삐리리"],a:0,t:"객관식",cat:"재밌는",e:"소가 전화하는 일은 '거의 없다'! 여기서 소가 우는 '무' 는 웃음소리 뽀인트"},
-{q:"가장 차가운 아이스크림은?",o:["바닐라","초코","민트","다이어트"],a:3,t:"객관식",cat:"재밌는",e:"'다이어트'가 제일 차가워요. '적게 먹는 다이어트'는 요요 오지만 아이스크림 다이어트는 차가움!"},
-{q:"세상에서 가장 못생긴 과일은?",o:["두리안","딸기","사과","망고"],a:1,t:"객관식",cat:"재밌는",e:"'딸기'가 제일 못생겼어요. 딸기(딸기아, 생겼어!)"},
-{q:"우유가 웃으면?",o:["까르르르","프르르","우하하","하하하"],a:0,t:"객관식",cat:"재밌는",e:"우유는 '프르르' 우니까 웃으면 '프르르'~ 아니 이건 우유가 우는거고 웃으면 까르르르! 정답: 까르르르"},
-{q:"개미의 허리는?",o:["잘록하다","굵다","없다","느껴진다"],a:0,t:"객관식",cat:"재밌는",e:"개미의 허리는 '잘록'하다. 개미는 잘록허리니까!"},
-{q:"세상에서 제일 흔한 동물은?",o:["개","고양이","소","닭"],a:2,t:"객관식",cat:"재밌는",e:"'소'가 제일 흔해요. 소는 어디에나 '소소'하게 있으니까!"},
-{q:"세상에서 가장 큰 동물은?",o:["코끼리","고래","기린","능력자"],a:3,t:"객관식",cat:"재밌는",e:"가장 큰 건 '능력자'! 능력이 크니까요. (코끼리가 틀렸어요)"},
-{q:"향수 회사에서 가장 싫어하는 곤충은?",o:["모기","파리","바퀴벌레","쇠똥구리"],a:1,t:"객관식",cat:"재밌는",e:"'파리'가 싫어요. 파리가 향수를 '뿌리까뿌리까' 하니까!"},
-{q:"축구 선수가 사는 집은?",o:["하프타임","골대","베컴하우스","오프사이드"],a:1,t:"객관식",cat:"재밌는",e:"축구 선수는 '골대(골 때리는 집)'에서 살아요! 골대라는 동네가 정답!"},
-{q:"컴퓨터가 춤을 추면?",o:["랜덤퍼","디스코","마우스","빠빠빠"],a:0,t:"객관식",cat:"재밌는",e:"컴퓨터는 '랜덤퍼'~ 랜덤에 맘을 시켜놓고!"},
-{q:"가장 슬픈 버스는?",o:["마을버스","시외버스","관광버스","우등버스"],a:2,t:"객관식",cat:"재밌는",e:"'관광버스'가 제일 슬퍼요. 관광이 아니고 '관(棺)광' 버스니까!"},
-{q:"세상에서 가장 부지런한 동물은?",o:["개미","꿀벌","게으름뱅이","다람쥐"],a:2,t:"객관식",cat:"재밌는",e:"'게으름뱅이'가 제일 부지런해요. 부지런히 게으름만 피우니까!"},
-{q:"누가 가장 뛰어나?",o:["말","사자","왕","토끼"],a:2,t:"객관식",cat:"재밌는",e:"'왕'이 제일 뛰어나요. 하늘 높이 뛰어난 게 아니라 '뛰어나'(도약)니까!"},
-{q:"태양이 사는 곳은?",o:["남극","사막","일출마을","수평선"],a:1,t:"객관식",cat:"재밌는",e:"태양은 '사막'에 살아요. 사막에는 '태양이 사막'(빼곡하게 있음)!"},
-{q:"전화기가 웃으면?",o:["하고하고","땅땅땅","울리고 웃고","찡그린다"],a:0,t:"객관식",cat:"재밌는",e:"전화기는 웃으면 '하고하고'! (하고하고 울리니까)"},
-{q:"가장 빠른 전화기는?",o:["휴대폰","공중전화","현금인출기","비상전화"],a:1,t:"객관식",cat:"재밌는",e:"'공중전화'가 제일 빨라요. 공중에서 하늘을 날면서 걸으니까?"},
-{q:"세상에서 가장 어리석은 사람은?",o:["바보","돌머리","백치미","모범생"],a:3,t:"객관식",cat:"재밌는",e:"'모범생'이 제일 어리석어요. 모범(밤)을 생으로 밖에 라는 건 아니고... 정답: 모범생. 이유: 밤을 생으로 먹으면 속이 안 좋아서!"},
-{q:"번개가 치면?",o:["쾅","번쩍","우르르","벼락치기"],a:3,t:"객관식",cat:"재밌는",e:"번개가 치면 시험공부 '벼락치기'~ 벼락이 치니까!"},
-{q:"세상에서 가장 안전한 화장실은?",o:["비상화장실","일반화장실","휴게소 화장실","학교 화장실"],a:0,t:"객관식",cat:"재밌는",e:"'비상화장실'이 제일 안전해요. 비상시에도 안전하니까!"},
-{q:"오리를 새끼 오리라고 부르면?",o:["덕쿵쾅쾅","아기 오리","오리온","오리고기"],a:0,t:"객관식",cat:"재밌는",e:"새끼 오리를 부르면 '덕쿵쾅쾅' 울리듯 온다는... 실제 정답은 '아기 오리'. (문제에 답이 있네요)"},
-{q:"세상에서 가장 큰 잎은?",o:["모란잎","연꽃잎","괴물잎","무거운잎"],a:2,t:"객관식",cat:"재밌는",e:"'괴물잎'이 제일 커요. 괴물이니까!"},
-{q:"가장 차가운 사람은?",o:["아이스맨","냉혹한 사람","범인","험한 사람"],a:2,t:"객관식",cat:"재밌는",e:"'범인'이 제일 차가워요. 범인은 항상 도망다녀서 시원하다?"},
-{q:"바다의 김은?",o:["마른김","꼬시래기","파래","김해"],a:3,t:"객관식",cat:"재밌는",e:"바다에는 '김해(金海)'가 있어요. 김은 바다에서 자라는 해조류니까요!"},
-{q:"세상에서 가장 부자 동물은?",o:["돼지","황소","백치","두꺼비"],a:1,t:"객관식",cat:"재밌는",e:"'황소'가 제일 부자라는 건 아니고, 황소가 황금을 먹어서 용돈을 번다는 뽀인트!"},
-{q:"가장 비싼 물은?",o:["수소수","생수","바닷물","엑스포수"],a:3,t:"객관식",cat:"재밌는",e:"'엑스포수'가 제일 비싸요. 온천수보다 비싼 엑스포수!"},
-{q:"가장 많이 쓰는 컴퓨터는?",o:["가정용 PC","노트북","택배 PC","폐지 PC"],a:2,t:"객관식",cat:"재밌는",e:"'택배 PC'가 제일 많이 쓰여요. 택배기사님이 하루 종일 들고 다니니까!"},
-{q:"세상에서 가장 조용한 곤충은?",o:["매미","귀뚜라미","나비","메뚜기"],a:2,t:"객관식",cat:"재밌는",e:"'나비'는 소리가 나지 않아서 제일 조용해요. 나비는 조용히 날개를 접고 숨죽이니까!"}
+{q:"소가 웃으면?",a:["우하하"],cat:"재밌는",e:"소는 '무우~' 하니까 웃으면 우하하!!"},
+{q:"우유가 웃으면?",a:["까르르르","까르르"],cat:"재밌는",e:"우유도 웃으면 까르르르!"},
+{q:"바다가 부끄러우면?",a:["온몸이 빨개진다","빨개진다"],cat:"재밌는",e:"부끄러우면 얼굴이 빨개지죠. 바다가 부끄러우면 온몸이 빨개진다!"},
+{q:"전화기를 물에 빠뜨리면?",a:["수화기"],cat:"재밌는",e:"전화기가 물에 빠지면 '수화기'!"},
+{q:"냉장고가 비어있는 이유는?",a:["고양이","고양이 때문"],cat:"재밌는",e:"고양이가 냉장고 안의 아무것도 안 꺼내 먹으니까 비어있어요."},
+{q:"세상에서 가장 못생긴 과일은?",a:["딸기"],cat:"재밌는",e:"'딸기(딸기, 아 생겼어!)'"},
+{q:"가장 차가운 아이스크림은?",a:["다이어트"],cat:"재밌는",e:"다이어트를 시작하면 '차가워'질 수밖에 없으니까"},
+{q:"소가 전화를 하면?",a:["거의 없다"],cat:"재밌는",e:"소가 전화하는 일은 '거의 없다'!"},
+{q:"세상에서 가장 흔한 동물은?",a:["소"],cat:"재밌는",e:"소는 어디에나 '소소'하게 있으니까"},
+{q:"세상에서 가장 큰 동물은?",a:["능력자"],cat:"재밌는",e:"능력이 제일 크니까 (코끼리나 고래는 보기엔 크지만...)"},
+{q:"향수 회사가 가장 싫어하는 곤충은?",a:["파리"],cat:"재밌는",e:"파리가 향수를 '뿌리까~뿌리까~' 하니까"},
+{q:"축구 선수가 사는 집은?",a:["골대"],cat:"재밌는",e:"골 때리는 집 '골대'에 살아요"},
+{q:"컴퓨터가 춤을 추면?",a:["랜덤퍼","랜덤"],cat:"재밌는",e:"랜덤에 맞춰 자유롭게 추니까 '랜덤퍼'"},
+{q:"가장 슬픈 버스는?",a:["관광버스"],cat:"재밌는",e:"'(관)棺 광버스'니까 제일 슬프죠"},
+{q:"세상에서 가장 부지런한 동물은?",a:["게으름뱅이"],cat:"재밌는",e:"게으름 피우는 일은 부지런히 하니까"},
+{q:"누가 가장 뛰어나?",a:["왕"],cat:"재밌는",e:"왕은 하늘 높이 '뛰어나'니까"},
+{q:"태양이 사는 곳은?",a:["사막"],cat:"재밌는",e:"사막에는 태양이 '사막'(빼곡히) 있으니까"},
+{q:"전화기가 웃으면?",a:["하고하고"],cat:"재밌는",e:"전화기는 '하고하고' 울리니까"},
+{q:"가장 빠른 전화기는?",a:["공중전화"],cat:"재밌는",e:"공중에서 걸어다니니까 제일 빨라요"},
+{q:"번개가 치면?",a:["벼락치기"],cat:"재밌는",e:"벼락이 치면 공부 '벼락치기'!"},
+{q:"세상에서 가장 안전한 화장실은?",a:["비상화장실"],cat:"재밌는",e:"위기 상황에도 안심하고 쓸 수 있는 화장실"},
+{q:"세상에서 가장 큰 잎은?",a:["괴물잎"],cat:"재밌는",e:"괴물 크기답게 큰 잎!"},
+{q:"세상에서 가장 시끄러운 도시는?",a:["와글와글"],cat:"재밌는",e:"와글와글 시끄러운 도시"},
+{q:"가장 추운 도시는?",a:["오들오들"],cat:"재밌는",e:"오들오들 떠는 도시"},
+{q:"바다에 사는 김은?",a:["김해"],cat:"재밌는",e:"바다에는 김(海藻)이 살고, 성은 김씨... 정답은 '김해'!"},
+{q:"세상에서 가장 조용한 곤충은?",a:["나비"],cat:"재밌는",e:"나비는 소리 없이 날아다니니까"},
+{q:"가장 비싼 물은?",a:["엑스포수","엑스포"],cat:"재밌는",e:"엑스포가 열리는 세상에서 제일 비싼 '엑스포수'?"},
+{q:"가장 차가운 사람은?",a:["범인"],cat:"재밌는",e:"범인은 도망다니다 보면 몸이 차가워지니까... 아니라고요?"}
 ];
 const historyQuestions=[
-{q:"1894년 조선에서 일어난 대규모 농민 운동은?",o:["동학농민운동","위정척사운동","개화운동","의병운동"],a:0,t:"객관식",cat:"역사",e:"1894년 전라도 고부에서 시작되어 전국으로 퍼진 농민 중심의 개혁운동입니다. 갑오개혁의 계기가 되었습니다."},
-{q:"세종대왕이 재위한 시대는?",o:["조선","고려","신라","백제"],a:0,t:"객관식",cat:"역사",e:"세종대왕은 조선 4대 임금으로 1418~1450년 재위했습니다. 훈민정음, 측우기, 앙부일구 등을 만들었습니다."},
-{q:"임진왜란 당시 수군을 지휘한 장군은?",o:["이순신","권율","곽재우","김시민"],a:0,t:"객관식",cat:"역사",e:"이순신 장군이 한산도대첩, 명량해전 등에서 승리했습니다. '난중일기'의 저자입니다."},
-{q:"한국의 광복(1945년) 직후 세워진 정부 명칭은?",o:["대한민국 임시정부","조선민주주의인민공화국","대한제국","미군정"],a:1,t:"객관식",cat:"역사",e:"1945년 8월 15일 광복 후, 1948년 남쪽에는 대한민국(대한민국 정부), 북쪽에는 조선민주주의인민공화국이 수립되었습니다."},
-{q:"고려를 건국한 인물은?",o:["왕건","궁예","견훤","태조 이성계"],a:0,t:"객관식",cat:"역사",e:"918년 왕건(고려 태조)이 후삼국을 통일하고 고려를 세웠습니다. 수도는 개경(개성)이었습니다."},
-{q:"신라 말기, 후삼국 중 하나인 후백제를 세운 인물은?",o:["견훤","궁예","백제 온조","혜공왕"],a:0,t:"객관식",cat:"역사",e:"900년 견훤이 후백제를 세웠습니다. 궁예는 후고구려(태봉)를 세웠습니다."},
-{q:"한국의 첫 번째 국가로 알려진 나라는?",o:["고조선","부여","옥저","동예"],a:0,t:"객관식",cat:"역사",e:"기원전 2333년 단군이 세운 고조선이 한국 최초의 국가입니다. BC 108년까지 존속했습니다."},
-{q:"1926년 순종 황제 장례일을 계기로 일어난 독립운동은?",o:["6.10 만세운동","3.1운동","광주학생항일운동","의열단 활동"],a:0,t:"객관식",cat:"역사",e:"1926년 6월 10일, 순종의 인산일(장례일)을 계기로 전국에서 만세운동이 일어났습니다. 3.1운동에 이어 이어졌습니다."},
-{q:"고구려의 수도로 옳은 것은?",o:["평양","경주","부여","한성"],a:0,t:"객관식",cat:"역사",e:"고구려는 국내성→평양으로 도읍을 옮겼습니다. 경주는 신라, 부여(사비)는 백제, 한성은 백제 초기였습니다."},
-{q:"일본의 청일전쟁 발발 연도는?",o:["1894년","1876년","1904년","1910년"],a:0,t:"객관식",cat:"역사",e:"1894년 동학농민운동을 틈타 청·일이 전쟁을 벌였고, 일본이 승리해 청에서 조선에 대한 영향력을 얻었습니다."},
-{q:"을사늑약의 결과로 박탈된 것은?",o:["외교권","군대","국토","언론"],a:0,t:"객관식",cat:"역사",e:"1905년 을사늑약으로 조선의 외교권이 일본에 넘어갔습니다. 이에 대한 반대 시위가 격화되었습니다."},
-{q:"세계사에서 로마 제국이 멸망한 해는?",o:["476년","395년","410년","1453년"],a:0,t:"객관식",cat:"역사",e:"서로마 제국은 476년 게르만족의 침입으로 멸망했습니다. 동로마(비잔티움) 제국은 1453년 멸망했습니다."},
-{q:"프랑스 혁명이 일어난 해는?",o:["1789년","1776년","1804년","1848년"],a:0,t:"객관식",cat:"역사",e:"1789년 바스티유 감옥 습격을 시작으로 프랑스 혁명이 발발했습니다. '자유, 평등, 박애'를 내세웠습니다."},
-{q:"미국 독립선언이 발표된 해는?",o:["1776년","1789년","1812년","1763년"],a:0,t:"객관식",cat:"역사",e:"1776년 7월 4일 미국이 영국으로부터의 독립을 선언했습니다. 매년 독립기념일로 기념합니다."},
-{q:"1차 세계대전이 끝난 해는?",o:["1918년","1914년","1939년","1929년"],a:0,t:"객관식",cat:"역사",e:"1914년 시작된 1차 세계대전은 1918년 끝났습니다. 이후 1939년 2차 세계대전이 발발했습니다."},
-{q:"1945년 제2차 세계대전이 끝난 계기는?",o:["히로시마·나가사키 원폭 투하","독일 항복","노르망디 상륙","베를린 함락"],a:0,t:"객관식",cat:"역사",e:"1945년 8월 히로시마·나가사키에 원자폭탄이 투하되면서 8월 15일 일본의 항복으로 전쟁이 끝났습니다."},
-{q:"한국의 최초의 근대적 조약인 강화도조약 체결 연도는?",o:["1876년","1882년","1884년","1905년"],a:0,t:"객관식",cat:"역사",e:"1876년 운요호 사건을 계기로 강화도에서 조선-일본 수호조약(강화도조약)이 체결되었습니다."},
+{q:"조선 왕조의 첫 번째 왕이자 건국자는?",a:["이성계","태조"],cat:"역사",e:"1392년 이성계가 조선을 건국하고 태조라는 묘호를 받았습니다. 고려를 무너뜨리고 한양(서울)을 수도로 정했습니다."},
+{q:"이순신 장군이 학익진을 사용하여 크게 승리한 전투는?",a:["한산도대첩","한산도"],cat:"역사",e:"1592년 8월, 한산도 앞바다에서 학이 날개를 편 형태의 전법으로 왜선 59척을 격침한 해전입니다. 임진왜란 3대 대첩 중 하나입니다."},
+{q:"3·1운동이 일어난 해는?",a:["1919"],cat:"역사",e:"1919년 3월 1일 태극기 만세 시위가 전국으로 확산된 독립운동입니다. 민족대표 33인이 독립선언서를 발표했습니다."},
+{q:"고려의 수도는?",a:["개성","개경"],cat:"역사",e:"고려 태조 왕건이 919년 수도로 정한 곳입니다. 개경이라고도 불렸으며, 현재 북한 개성시입니다."},
+{q:"백제의 마지막 수도는?",a:["사비","부여"],cat:"역사",e:"475년 고구려에 함락된 한성(위례성)에서 남쪽으로 천도하여 사비(현재 충남 부여)에 세운 수도입니다."},
+{q:"신라의 삼국 통일을 완성한 왕은?",a:["문무왕"],cat:"역사",e:"676년 당나라를 물리치고 한반도 내의 삼국 통일을 완성한 왕입니다. 수군을 조직해 바다를 지키기도 했습니다."},
+{q:"을미사변이 일어난 해는?",o:["1882","1894","1895","1905"],a:2,t:"객관식",cat:"역사",e:"1895년 일본군이 명성황후를 시해한 사건입니다. 을미년(1895)에 일어났습니다. 병인양요(1866), 임오군란(1882)과 혼동하지 마세요."},
+{q:"임진왜란이 시작된 해는?",a:["1592"],cat:"역사",e:"1592년 일본이 조선을 침략한 전쟁입니다. 1598년까지 7년간 계속되었으며, 이순신 장군의 활약이 결정적이었습니다."},
+{q:"세종대왕이 창제한 글은?",a:["한글","훈민정음"],cat:"역사",e:"1443년 세종대왕이 백성을 위해 만든 글자입니다. 정식 명칭은 '훈민정음'이며, 1446년 반포되었습니다."},
+{q:"한국전쟁 정전협정이 체결된 해는?",a:["1953"],cat:"역사",e:"1950년 6월 25일 시작되어 1953년 7월 27일 판문점에서 정전협정이 체결되었습니다. 휴전이지 종전은 아닙니다."},
+{q:"세종대왕이 재위한 시대는?",a:["조선"],cat:"역사",e:"세종대왕은 조선 4대 임금으로 1418~1450년 재위했습니다. 훈민정음, 측우기, 앙부일구 등을 만들었습니다."},
+{q:"임진왜란 당시 수군을 지휘한 장군은?",a:["이순신"],cat:"역사",e:"이순신 장군이 한산도대첩, 명량해전 등에서 승리했습니다. '난중일기'의 저자입니다."},
+{q:"고려를 건국한 인물은?",a:["왕건","태조 왕건"],cat:"역사",e:"918년 왕건(고려 태조)이 후삼국을 통일하고 고려를 세웠습니다. 수도는 개경(개성)이었습니다."},
+{q:"단군왕검이 세운 나라는?",a:["고조선"],cat:"역사",e:"기원전 2333년 단군왕검이 세운 나라로, 한국 최초의 국가로 알려져 있습니다. 10월 3일이 개천절입니다."},
+{q:"병인양요가 일어난 해는?",a:["1866"],cat:"역사",e:"1866년 프랑스가 조선을 침략한 사건입니다. 강화도에서 격퇴되었으며, 프랑스 군함 4척을 격침했습니다."},
+{q:"경술국치가 일어난 해는?",a:["1910"],cat:"역사",e:"1910년 8월 29일, 한일병합조약으로 조선이 일본에 완전히 병합된 사건입니다. '을사늑약(1905)'과 다릅니다."},
+{q:"조선 시대 최고의 교육 기관은?",a:["성균관"],cat:"역사",e:"1398년 태조 이성계가 세운 조선 최고 학문기관입니다. 유교 경전을 가르쳤으며, 성균관 대학의 전신입니다."},
+{q:"을사늑약이 체결된 해는?",a:["1905"],cat:"역사",e:"1905년 일본이 강요하여 체결된 불평등 조약입니다. 5대신(을사5적)이 서명하여 '을사조약'이라고도 합니다. 경술국치(1910)와 다릅니다."},
+{q:"고구려의 시조는?",a:["주몽","동명성왕"],cat:"역사",e:"기원전 37년 고구려를 건국한 인물입니다. '주몽'은 본명이고 '동명성왕'은 시호입니다."},
+{q:"신라의 시조는?",a:["박혁거세"],cat:"역사",e:"기원전 57년 신라를 건국한 인물입니다. 알에서 태어났다는 전설이 있으며, 성이 '박(朴)'입니다."},
+{q:"백제의 시조는?",a:["온조"],cat:"역사",e:"기원전 18년 고구려에서 남하하여 백제를 건국한 인물입니다. 고구려 동명성왕(주몽)의 아들입니다."},
+{q:"고조선 다음으로 세워진 고대 국가 중 강력했던 나라는?",o:["부여","옥저","동예","마한"],a:0,t:"객관식",cat:"역사",e:"부여는 만주 송화강 유역에서 발달한 가장 큰 고대 국가 중 하나였습니다. 옥저·동예는 해안 지역, 마한은 가야와 함께 초기 국가였습니다."},
+{q:"고종이 1897년 선포한 것은?",o:["대한제국","대한민국 임시정부","갑신정변","화폐개혁"],a:0,t:"객관식",cat:"역사",e:"1897년 고종이 대한제국을 선포하고 황제에 즉위했습니다. 국호를 '대한'으로 바꾸었습니다."},
+{q:"조선 후기 실학을 대표하는 학자는?",o:["정약용","이황","율곡 이이","이이"],a:0,t:"객관식",cat:"역사",e:"정약용(다산)은 '목민심서', '경세유표'를 쓴 실학자입니다. 이황·이이는 성리학자입니다."},
+{q:"1945년 제2차 세계대전이 끝난 직접적 계기는?",o:["히로시마·나가사키 원폭 투하","독일 항복","베를린 함락","노르망디 상륙"],a:0,t:"객관식",cat:"역사",e:"1945년 8월 히로시마·나가사키에 원자폭탄이 투하되면서 8월 15일 일본의 항복으로 전쟁이 끝났습니다."},
+{q:"1876년 체결된 조선 최초의 근대 조약은?",o:["강화도조약","을사늑약","한일의정서","기유각서"],a:0,t:"객관식",cat:"역사",e:"1876년 운요호 사건을 계기로 강화도에서 조선-일본 수호조약(강화도조약)이 체결되었습니다."},
 {q:"아테네 민주정이 발전한 고대 문명은?",o:["그리스","로마","이집트","페르시아"],a:0,t:"객관식",cat:"역사",e:"기원전 5세기 그리스 아테네에서 페리클레스 시대에 직접 민주정이 발전했습니다."},
-{q:"고려 시대 최초로 원나라의 침입을 막아낸 전쟁은?",o:["몽골 침입 저항","거란 침입 저항","왜구 토벌","여진 정벌"],a:0,t:"객관식",cat:"역사",e:"1231년부터 시작된 몽골의 침입에 고려가 약 40년간 항전했습니다. 삼별초의 대몽 항쟁이 유명합니다."},
-{q:"조선 후기 실학을 대표하는 학자는?",o:["정약용","이황","율곡 이이","세종"],a:0,t:"객관식",cat:"역사",e:"정약용(다산)은 '목민심서', '경세유표'를 쓴 실학자입니다. 이황·이이는 성리학자입니다."},
-{q:"백제 성왕 때의 문물교류 대상국은?",o:["일본","당","요","금"],a:0,t:"객관식",cat:"역사",e:"성왕 때 백제는 일본에 불교, 의복, 의약 등 선진 문물을 전수했습니다. 노리사치계 파견이 유명합니다."},
-{q:"삼국이 통일된 순서로 올바른 것은?",o:["신라가 백제·고구려를 통일","고구려가 통일","백제가 통일","가야가 통일"],a:0,t:"객관식",cat:"역사",e:"신라는 나·당 연합으로 660년 백제, 668년 고구려를 멸망시키고 삼국을 통일했습니다."},
-{q:"8·15광복 후 분단이 고착된 계기가 된 전쟁은?",o:["한국전쟁","청일전쟁","러일전쟁","1차 세계대전"],a:0,t:"객관식",cat:"역사",e:"1950년 한국전쟁을 거치며 남북 분단이 고착되었습니다. 1953년 휴전으로 현 체제가 이어졌습니다."},
-{q:"대한제국을 선포한 왕은?",o:["고종","순종","태조","성종"],a:0,t:"객관식",cat:"역사",e:"1897년 고종이 대한제국을 선포하고 황제에 즉위했습니다. 국호를 '대한'으로 바꾸었습니다."},
-{q:"세종대왕이 편찬한 백과사전은?",o:["경제육전","집현전 학자들의 저서","조선왕조실록","일성록"],a:3,t:"객관식",cat:"역사",e:"세종 때 집현전 학자들이 '동국정운', '칠정산' 등 여러 저서를 편찬했으며, 백과사전으로는 '경제육전'이 대표적입니다."},
-{q:"고려 건국 직후 후삼국 통일을 향한 최대 전투는?",o:["고창전투","벽주성 전투","수리성 전투","운주성 전투"],a:0,t:"객관식",cat:"역사",e:"930년 왕건과 후백제 견훤이 맞붙은 일리천 전투(고창 전투)에서 왕건이 승리했습니다."},
-{q:"임진왜란 때 진주성에서 끝까지 싸운 명장은?",o:["김시민","이순신","곽재우","유성룡"],a:0,t:"객관식",cat:"역사",e:"김시민 장군이 1592년 진주성 전투에서 대승을 거두었지만, 1593년 제2차 진주성 전투에서 전사했습니다."},
-{q:"고구려 고국원왕 이전 수도는?",o:["국내성","평양","한성","사비"],a:0,t:"객관식",cat:"역사",e:"고구려 초기 수도는 국내성(족본)이었으며, 이후 평양으로 천도했습니다."},
-{q:"청일전쟁 이후 일본이 독점한 것을 조선이 되찾기 위해 노력한 것은?",o:["철도 부설권","어업권","화폐 개혁","세금 제정"],a:0,t:"객관식",cat:"역사",e:"1897년 대한제국 수립 후 철도 부설권 등 이권을 되찾기 위해 황실 광산·철도 사업을 추진했습니다."},
-{q:"미군정이 펼친 정치 형태는?",o:["군정","민정","과도정부","통일정부"],a:0,t:"객관식",cat:"역사",e:"1945년 8월 이후 한반도 남부는 미군정이 실시되었고, 북부는 소군정이 실시되었습니다."}
+{q:"백제 성왕 때 일본에 전해준 문물은?",o:["불교와 선진 문물","한자","화폐","천문학"],a:0,t:"객관식",cat:"역사",e:"성왕 때 백제는 일본에 불교, 의복, 의약 등 선진 문물을 전수했습니다. 노리사치계 파견이 유명합니다."},
+{q:"임진왜란 때 진주성에서 끝까지 싸운 명장은?",o:["김시민","곽재우","유성룡","권율"],a:0,t:"객관식",cat:"역사",e:"김시민 장군이 1592년 진주성 전투에서 대승을 거두었지만, 1593년 제2차 진주성 전투에서 전사했습니다."},
+{q:"1926년 순종 황제 장례일을 계기로 일어난 독립운동은?",o:["6·10 만세운동","3·1 운동","광주학생항일운동","의열단 활동"],a:0,t:"객관식",cat:"역사",e:"1926년 6월 10일, 순종의 인산일(장례일)을 계기로 전국에서 만세운동이 일어났습니다."}
 ];
 
 let curQuizId='common',adminQuiz='common',authUser=null,isAdmin=false,questCache={},emailMode='login';
@@ -420,6 +448,27 @@ async function restJson(path){
   const resp=await fetch('https://quiz-ranking-6cb9f-default-rtdb.firebaseio.com'+path+'.json');
   if(!resp.ok)throw new Error('HTTP '+resp.status);
   return resp.json();
+}
+
+function fsAdd(col,obj){
+  if(!fsReady)return Promise.resolve();
+  return fs.collection(col).add(obj).catch(()=>{});
+}
+function fsSet(col,docId,obj,merge){
+  if(!fsReady)return Promise.resolve();
+  if(merge===true)return fs.collection(col).doc(docId).set(obj,{merge:true}).catch(()=>{});
+  return fs.collection(col).doc(docId).set(obj).catch(()=>{});
+}
+function fsDel(col,docId){
+  if(!fsReady)return Promise.resolve();
+  return fs.collection(col).doc(docId).delete().catch(()=>{});
+}
+function fsInc(col,docId,obj){
+  if(!fsReady)return Promise.resolve();
+  const inc=firebase.firestore.FieldValue.increment(1);
+  const data={};
+  Object.keys(obj).forEach(k=>data[k]=inc);
+  return fs.collection(col).doc(docId).set(data,{merge:true}).catch(()=>{});
 }
 
 function normalize(s){
@@ -608,6 +657,16 @@ function getQuestionPool(qid){
   return out;
 }
 
+window.saveNickname=function(){
+  const inp=document.getElementById('nickname');
+  inp.value=inp.value.trim();
+  nickname=inp.value;
+  try{localStorage.setItem('quiz_nickname',nickname)}catch(e){}
+};
+window.nicknameChanged=function(){
+  saveNickname();
+  refreshRecordsSub();
+};
 window.updateStartUI=function(){
   const pre=document.getElementById('auth-pre'),post=document.getElementById('auth-post'),menu=document.getElementById('quiz-menu');
   pre.classList.toggle('hidden',!!authUser);
@@ -616,8 +675,14 @@ window.updateStartUI=function(){
   if(authUser){
     document.getElementById('auth-email').textContent=authUser.email||'(구글 계정)';
     document.getElementById('auth-badge').textContent=isAdmin?'· 관리자':'';
-    document.getElementById('nick-wrap').classList.remove('hidden');
-    document.getElementById('admin-btn-wrap').classList.toggle('hidden',!isAdmin);
+    const nw=document.getElementById('nick-wrap');
+    nw.classList.remove('hidden');
+    const nickInput=document.getElementById('nickname');
+    if(!nickInput.value){
+      try{nickInput.value=localStorage.getItem('quiz_nickname')||''}catch(e){}
+      nickname=nickInput.value;
+    }
+    document.getElementById('admin-btn').classList.toggle('hidden',!isAdmin);
     renderQuizButtons();
   }
 };
@@ -625,17 +690,24 @@ function renderQuizButtons(){
   const wrap=document.getElementById('quiz-btns');
   let html='';
   QUIZ_LIST.forEach(q=>{
-    html+=`<div class="quiz-menu-item">
+    html+=`<div class="quiz-menu-item" style="cursor:pointer" onclick="openQuizLobby('${q.id}')">
       <div style="flex:1;text-align:left">
         <div style="font-weight:700">${esc(q.title)}</div>
         <div style="font-size:.8em;color:#aaa">${esc(q.desc)}</div>
       </div>
-      <button class="btn btn-primary" style="margin:0;padding:10px 18px;font-size:.9em" onclick="startQuiz('${q.id}')">시작</button>
-      <button class="btn btn-secondary" style="margin:0;padding:10px 14px;font-size:.9em" onclick="showRankingOnly('${q.id}')">랭킹</button>
+      <span class="qq-arrow">▸</span>
     </div>`;
   });
   wrap.innerHTML=html;
 }
+window.openQuizLobby=function(qid){
+  curQuizId=qid||'common';
+  const def=QUIZ_LIST.find(q=>q.id===curQuizId)||QUIZ_LIST[0];
+  document.getElementById('ql-logo').textContent=def.title;
+  document.getElementById('ql-desc').textContent=def.desc;
+  document.getElementById('ql-user').textContent=(nickname||document.getElementById('nickname').value.trim())?( (nickname||document.getElementById('nickname').value.trim())+' 님' ):'';
+  showScreen('screen-quiz-lobby');
+};
 function init(){
   allQuestions.forEach((q,i)=>q.id=i);
   ensureQuest('common');
@@ -695,7 +767,83 @@ window.emailLogin=async function(){
 window.logout=function(){firebase.auth().signOut()};
 window.goStart=function(){showScreen('screen-start')};
 window.showScreen=function(id){document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));document.getElementById(id).classList.remove('hidden')};
-window.showRankingOnly=function(qid){showScreen('screen-ranking');loadRanking('ranking-standalone-wrap',null,qid||curQuizId)};
+window.showRankingOnly=function(qid){
+  showScreen('screen-ranking');
+  const sel=document.getElementById('rank-qsel');
+  sel.innerHTML=QUIZ_LIST.map(q=>`<option value="${q.id}">${esc(q.title)}</option>`).join('');
+  sel.value=qid||curQuizId;
+  loadRanking('ranking-standalone-wrap',null,qid||curQuizId);
+};
+window.rankQuizChanged=function(){
+  loadRanking('ranking-standalone-wrap',null,document.getElementById('rank-qsel').value);
+};
+window.refreshRecordsSub=function(){
+  const el=document.getElementById('records-sub');
+  if(!el)return;
+  const nick=document.getElementById('nickname').value.trim();
+  if(nick)el.textContent=nick+' 님의 플레이 기록 · 시도 횟수대로 1차, 2차... 순서로 표시됩니다';
+};
+window.showMyRecords=async function(){
+  const nick=document.getElementById('nickname').value.trim();
+  if(!nick){alert('닉네임을 먼저 입력해주세요.');return}
+  nickname=nick;
+  document.getElementById('records-title').textContent=nick+' 님의 기록';
+  refreshRecordsSub();
+  showScreen('screen-records');
+  const wrap=document.getElementById('records-wrap');
+  wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  try{
+    const val=await restJson('/qlog');
+    let data=[];
+    if(val)Object.keys(val).forEach(k=>{const v=val[k];if(v&&v.nickname===nick)data.push({key:k,val:v})});
+    data.sort((a,b)=>a.val.date-b.val.date);
+    if(data.length===0){wrap.innerHTML='<p style="color:#aaa;padding:20px">아직 기록이 없습니다. 퀴즈를 풀어보세요!</p>';return}
+    const byDate=new Map();
+    data.forEach(r=>{
+      const d=String(r.val.date);
+      if(!byDate.has(d))byDate.set(d,[]);
+      byDate.get(d).push(r);
+    });
+    const groups=[...byDate.values()].sort((a,b)=>(a[0].val.date-b[0].val.date));
+    let html='<div class="attempt-tabs" style="margin-bottom:14px">';
+    groups.forEach((list,gi)=>{
+      const correct=list.filter(r=>r.val.correct).length;
+      const score=Math.round(correct/list.length*100);
+      html+=`<button class="attempt-tab${gi===0?' on':''}" onclick="showRecordGroup(${gi})">${gi+1}차 · ${score}점</button>`;
+    });
+    html+='</div><div id="records-group"></div>';
+    wrap.innerHTML=html;
+    window.__recordGroups=groups;
+    showRecordGroup(0);
+  }catch(e){wrap.innerHTML='<p style="color:#aaa;padding:20px">기록 불러오기 실패</p>'}
+};
+window.showRecordGroup=function(gi){
+  const groups=window.__recordGroups||[];
+  const container=document.getElementById('records-wrap');
+  container.querySelectorAll('.attempt-tab').forEach((b,i)=>b.classList.toggle('on',i===gi));
+  const wrap=document.getElementById('records-group');
+  const list=groups[gi]||[];
+  const qid=(list[0]&&(list[0].val.quiz||'common'))||'common';
+  const qdef=QUIZ_LIST.find(q=>q.id===qid);
+  const correct=list.filter(r=>r.val.correct).length;
+  const score=Math.round(correct/list.length*100);
+  let html=`<div class="rec-hd"><span style="color:#ffd200;font-weight:700">${esc(qdef?qdef.title:'퀴즈')}</span> <span style="color:#aaa">· ${score}점 (${correct}/${list.length} 정답)</span></div>`;
+  list.forEach(r=>{
+    const v=r.val;
+    const got=v.correct?`<span class="ans-got">${esc(v.userAns)}</span>`:`<span class="ans-got wrong">${esc(v.userAns||'(무응답)')} <span style="color:#aaa;font-size:.85em">→ ${esc(v.correctAnswer)}</span></span>`;
+    const ts=new Date(v.date);
+    const timeStr=`${ts.getMonth()+1}월 ${ts.getDate()}일 ${String(ts.getHours()).padStart(2,'0')}:${String(ts.getMinutes()).padStart(2,'0')}`;
+    html+=`<div class="ans-item">
+      <div><span class="ans-result ${v.correct?'y':'n'}">${v.correct?'O':'X'}</span></div>
+      <div>
+        <div class="ans-q">${esc(v.q)}</div>
+        <div class="ans-meta">${esc(v.cat)} · ${timeStr}</div>
+      </div>
+      <div class="ans-user">${got}</div>
+    </div>`;
+  });
+  wrap.innerHTML=html;
+};
 
 window.startQuiz=async function(qid){
   qid=qid||curQuizId;
@@ -882,8 +1030,9 @@ async function finishQuiz(){
         if(exists){
           // 이미 같은 닉네임이 기록되어 있으면 무시 (첫 번째 것만 기록 유지)
           console.log('이미 랭킹에 등록된 닉네임입니다. 첫 기록이 유지됩니다.');
-        }else{
+}else{
           await db.ref(rankNodePath(curQuizId)).push({nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
+          fsAdd('rankings',{quiz:curQuizId,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
           saved=true;
         }
       }catch(e){console.warn('랭킹 저장 실패:',e)}
@@ -896,6 +1045,7 @@ async function finishQuiz(){
           return s;
         }));
         await Promise.allSettled(txs);
+        attemptLog.forEach(a=>fsInc('qstats',curQuizId+'_'+a.id,{tries:1,wrong:a.wrong?1:0}));
       }catch(e){console.warn('문항 통계 저장 실패:',e)}
       try{
         const logMap={};attemptLog.forEach(a=>logMap[a.id]=a);
@@ -904,6 +1054,7 @@ async function finishQuiz(){
           const a=logMap[q.id];
           if(!a)return Promise.resolve();
           const correctAnswer=q.t==='객관식'?q.o[q.a]:q.a[0];
+          fsAdd('qlog',{quiz:curQuizId,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
           return qlRef.push({quiz:curQuizId,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
         });
         await Promise.allSettled(writes);
@@ -1234,10 +1385,11 @@ window.saveQuest=async function(){
     if(!ans){alert('정답을 입력해주세요.');return}
     obj={q,cat,t:'주관식',a:ans.split(',').map(s=>s.trim()).filter(Boolean),e,custom:!isDefault};
   }
-  try{
+try{
     const qf=questRef(adminQuiz);
     const dest=key||(await db.ref(qf).push()).key;
     await db.ref(qf).child(dest).set(obj);
+    fsSet('quest',adminQuiz+'_'+dest,{quiz:adminQuiz,key:dest,data:obj});
     questCache[adminQuiz]=null;
     await ensureQuest(adminQuiz);
     closeQuestForm();
@@ -1249,8 +1401,8 @@ window.toggleQuestHide=async function(key){
     const qf=questRef(adminQuiz);
     const map=questCache[adminQuiz]||{};
     const isHiddenNow=!!map[String(key)]&&map[String(key)].remove;
-    if(isHiddenNow)await db.ref(qf).child(String(key)).set(null);
-    else await db.ref(qf).child(String(key)).set({remove:true});
+    if(isHiddenNow){await db.ref(qf).child(String(key)).set(null);fsDel('quest',adminQuiz+'_'+key)}
+    else{await db.ref(qf).child(String(key)).set({remove:true});fsSet('quest',adminQuiz+'_'+key,{quiz:adminQuiz,key:key,data:{remove:true}})}
     questCache[adminQuiz]=null;
     await ensureQuest(adminQuiz);
     renderQuestList();
@@ -1260,6 +1412,7 @@ window.deleteQuest=async function(key){
   if(!confirm('이 문제를 삭제할까요? (통계는 남아있습니다)'))return;
   try{
     await db.ref(questRef(adminQuiz)).child(String(key)).set(null);
+    fsDel('quest',adminQuiz+'_'+key);
     questCache[adminQuiz]=null;
     await ensureQuest(adminQuiz);
     renderQuestList();
