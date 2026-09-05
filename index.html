@@ -1344,7 +1344,8 @@ async function finishQuiz(){
           console.log('이미 랭킹에 등록된 닉네임입니다. 첫 기록이 유지됩니다.');
 }else{
           await db.ref(rankNodePath(curQuizId)).push({uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
-          fsSet('rankings',(nickname+'_'+Date.now()).replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),{quiz:curQuizId,uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
+          fsSet('rankings',curQuizId,{quiz:curQuizId,updated:Date.now()},{merge:true});
+          fsSet('rankings/'+curQuizId+'/records',(nickname+'_'+Date.now()).replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),{quiz:curQuizId,uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
           saved=true;
         }
       }catch(e){console.warn('랭킹 저장 실패:',e)}
