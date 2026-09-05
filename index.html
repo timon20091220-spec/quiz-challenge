@@ -200,6 +200,9 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
   .ranking-table th,.ranking-table td{padding:6px 5px}
   .ranking-table .rank-name{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
+.rank-tab{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#ccc;border-radius:20px;padding:9px 18px;font-size:.9em;font-weight:700;cursor:pointer;transition:all .2s}
+.rank-tab:hover{border-color:rgba(255,210,0,.5);color:#fff}
+.rank-tab.tab-active{background:linear-gradient(135deg,#f7971e,#ffd200);color:#2d2a10;border-color:transparent}
 .chk{width:42px;height:26px;display:inline-flex;align-items:center;cursor:pointer}
 @media(max-width:500px){.logo{font-size:2em}.question-text{font-size:1.05em}.score-details{grid-template-columns:1fr}.quiz-header{flex-direction:column;align-items:flex-start}.option-grid{grid-template-columns:1fr}}
 </style>
@@ -334,8 +337,10 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <div id="screen-ranking" class="screen hidden">
     <div class="ranking-card">
       <h2 style="margin-bottom:5px">전체 랭킹</h2>
-      <div style="text-align:center;margin:12px 0">
-        <select id="rank-qsel" class="analysis-select" onchange="rankQuizChanged()"></select>
+      <div style="display:flex;justify-content:center;gap:8px;margin:14px 0;flex-wrap:wrap">
+        <button id="rank-tab-common" class="rank-tab" onclick="showRankTab('common')">상식 퀴즈</button>
+        <button id="rank-tab-ajaeggae" class="rank-tab" onclick="showRankTab('ajaeggae')">아재개그 퀴즈</button>
+        <button id="rank-tab-history" class="rank-tab" onclick="showRankTab('history')">역사 퀴즈</button>
       </div>
       <p style="color:#aaa;margin-bottom:12px;font-size:.9em">상위 50명</p>
       <div id="ranking-standalone-wrap"><div class="loading"><div class="spinner"></div></div></div>
@@ -821,7 +826,7 @@ window.confirmNickname=async function(){
     if(await nicknameTaken(nick,uid)){alert('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');return}
     try{
       await db.ref('usernames/'+uid).set({nickname:nick,update:Date.now()});
-      fsSet('users',uid,{nickname:nick});
+      fsSet('users',nick.replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),{uid:uid,email:authUser?authUser.email:'',nickname:nick,registered:true});
     }catch(e){console.warn('닉네임 저장 실패:',e)}
   }
   nickname=nick;
@@ -943,7 +948,6 @@ window.googleSignup=async function(){
     const u=firebase.auth().currentUser;
     if(u){
       try{await db.ref('registered/'+u.uid).set({at:Date.now()})}catch(e){console.warn('가입 기록 저장 실패:',e)}
-      fsSet('users',u.uid,{email:u.email,registered:true});
     }
   }catch(e){
     const c=e.code||'';
@@ -1006,7 +1010,6 @@ window.emailLogin=async function(){
       const u=firebase.auth().currentUser;
       if(u){
         try{await db.ref('registered/'+u.uid).set({at:Date.now()})}catch(e){console.warn('가입 기록 저장 실패:',e)}
-        fsSet('users',u.uid,{email:email,registered:true});
       }
       pendingSignup=false;
       gateAlerted=false;
@@ -1034,15 +1037,16 @@ window.emailLogin=async function(){
 window.logout=function(){firebase.auth().signOut()};
 window.goStart=function(){showScreen('screen-start')};
 window.showScreen=function(id){document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));document.getElementById(id).classList.remove('hidden')};
+window.showRankTab=function(qid){
+  ['common','ajaeggae','history'].forEach(id=>{
+    const b=document.getElementById('rank-tab-'+id);
+    if(b)b.classList.toggle('tab-active',id===qid);
+  });
+  loadRanking('ranking-standalone-wrap',null,qid);
+};
 window.showRankingOnly=function(qid){
   showScreen('screen-ranking');
-  const sel=document.getElementById('rank-qsel');
-  sel.innerHTML=QUIZ_LIST.map(q=>`<option value="${q.id}">${esc(q.title)}</option>`).join('');
-  sel.value=qid||curQuizId;
-  loadRanking('ranking-standalone-wrap',null,qid||curQuizId);
-};
-window.rankQuizChanged=function(){
-  loadRanking('ranking-standalone-wrap',null,document.getElementById('rank-qsel').value);
+  showRankTab(qid||curQuizId||'common');
 };
 window.refreshRecordsSub=function(){applyNicknameUI()};
 window.__recCache=null;
