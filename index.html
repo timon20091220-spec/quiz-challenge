@@ -512,7 +512,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-const APP_VER='v16';
+const APP_VER='v17';
 (function(){try{var m=(location.search||'').match(/[?&]v=([^&]*)/);if(!m||decodeURIComponent(m[1])!==APP_VER)location.replace(location.pathname+'?v='+APP_VER)}catch(e){}})();
 window.__dbgErrs=[];
 function showDbg(msg){
@@ -1534,9 +1534,12 @@ async function finishQuiz(){
           playerDocs.push({quiz:curQuizId,uid:uid,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now,run:runId});
         });
         if(playerDocs.length&&fsReady){
-          const arrU=firebase.firestore.FieldValue.arrayUnion;
-          fsSet('players',(nickname||'empty').replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),
-            {attempts:arrU(...playerDocs),quiz:curQuizId,last:now},{merge:true});
+          const safe=(nickname||'empty').replace(/[\/.]+$/,'').replace(/[\/.]/g,'_');
+          let prev=[];
+          let d=await withTimeout(fsGetDoc('players',safe),3500).catch(()=>undefined);
+          if(d===undefined)d=await fsRestGet('players/'+encodeURIComponent(safe));
+          if(d&&Array.isArray(d.attempts))prev=d.attempts;
+          fsSet('players',safe,{attempts:prev.concat(playerDocs),quiz:curQuizId,last:now},{merge:true});
         }
       }catch(e){console.warn('답안 기록 저장 실패:',e)}
       try{
