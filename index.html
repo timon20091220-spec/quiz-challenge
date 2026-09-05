@@ -104,6 +104,27 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .ans-got{color:#4caf50;font-weight:600}
 .ans-got.wrong{color:#f44336}
 .ans-user{color:#ffd200}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(6px);display:flex;justify-content:center;align-items:center;z-index:100;animation:fadeIn .25s}
+.modal-card{background:linear-gradient(180deg,#1e1e3f,#15132e);border:1px solid rgba(255,210,0,.25);border-radius:18px;padding:34px 28px;width:min(90%,340px);box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal-card h3{font-size:1.25em;margin-bottom:6px;color:#ffd200}
+.modal-sub{color:#aaa;font-size:.88em;margin-bottom:22px}
+.modal-card input{width:100%;padding:14px;border:2px solid #444;border-radius:12px;background:#0f0c29;color:#fff;font-size:1.05em;outline:none;text-align:center;margin-bottom:20px;transition:border .2s;letter-spacing:2px}
+.modal-card input:focus{border-color:#ffd200;box-shadow:0 0 15px rgba(255,210,0,.15)}
+.modal-card input::placeholder{letter-spacing:0;color:#666}
+.shake{animation:shake .45s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
+.modal-btns{display:flex;gap:12px;justify-content:center}
+.modal-btns .btn{margin:0;padding:12px 30px}
+.player-item{display:flex;justify-content:space-between;align-items:center;padding:15px 16px;border:1px solid rgba(255,255,255,.09);border-radius:12px;margin-bottom:8px;cursor:pointer;background:rgba(255,255,255,.04);transition:all .2s}
+.player-item:hover{border-color:#ffd200;background:rgba(255,210,0,.08);transform:translateX(3px)}
+.player-name{font-weight:700;font-size:1.05em;display:flex;align-items:center;gap:8px}
+.player-score{color:#ffd200;font-weight:700;font-size:1.1em}
+.player-time{color:#aaa;font-size:.85em;text-align:right}
+.player-medal{font-size:1.15em}
+.detail-back{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.detail-back h3{color:#ffd200}
+.session-tag{margin:18px 0 8px;font-size:.85em;color:#aaa;display:flex;align-items:center;gap:10px}
+.session-tag::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
 .chk{width:42px;height:26px;display:inline-flex;align-items:center;cursor:pointer}
 @media(max-width:500px){.logo{font-size:2em}.question-text{font-size:1.05em}.score-details{grid-template-columns:1fr}.quiz-header{flex-direction:column;align-items:flex-start}.option-grid{grid-template-columns:1fr}}
 </style>
@@ -179,35 +200,48 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
     <div class="ranking-card">
       <h2 style="margin-bottom:5px">관리자 전용</h2>
       <p style="color:#aaa;margin-bottom:15px;font-size:.9em">문항 오답률 · 답안 기록 분석</p>
-      <div style="display:flex;justify-content:center;gap:10px;margin-bottom:20px">
-        <button id="tab-stats" class="tab-btn tab-active" onclick="showAnalysisTab('stats')">오답률 분석</button>
-        <button id="tab-log" class="tab-btn" onclick="showAnalysisTab('log')">답안 기록</button>
-      </div>
-      <div id="analysis-controls" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:15px;justify-content:center;align-items:center">
-        <select id="analysis-sort" class="analysis-select" onchange="renderAnalysis()">
-          <option value="rate">오답률 높은 순</option>
-          <option value="tries">시도 많은 순</option>
-          <option value="wrong">오답 많은 순</option>
-          <option value="number">문항 번호 순</option>
-        </select>
-        <label style="display:flex;align-items:center;gap:6px;font-size:.9em;color:#ccc">
-          <input type="checkbox" id="analysis-only-wrong" onchange="renderAnalysis()"> 오답 있는 문제만
-        </label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:.9em;color:#ccc">
-          <input type="checkbox" id="analysis-show-answer" onchange="renderAnalysis()"> 정답 표시
-        </label>
-      </div>
-      <div id="analysis-wrap"><div class="loading"><div class="spinner"></div></div></div>
-      <div id="answerlog-wrap" class="hidden" style="text-align:left">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:15px;flex-wrap:wrap">
-          <span style="color:#aaa;font-size:.9em">최근 100건 · <span id="anslog-count"></span></span>
-          <button class="btn btn-secondary" style="padding:8px 16px;font-size:.85em;margin:0" onclick="clearAnswerLog()">기록 비우기</button>
+      <div id="analysis-content" class="hidden">
+        <div style="display:flex;justify-content:center;gap:10px;margin-bottom:20px">
+          <button id="tab-stats" class="tab-btn tab-active" onclick="showAnalysisTab('stats')">오답률 분석</button>
+          <button id="tab-log" class="tab-btn" onclick="showAnalysisTab('log')">답안 기록</button>
         </div>
-        <div id="answerlog-list"></div>
+        <div id="analysis-controls" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:15px;justify-content:center;align-items:center">
+          <select id="analysis-sort" class="analysis-select" onchange="renderAnalysis()">
+            <option value="rate">오답률 높은 순</option>
+            <option value="tries">시도 많은 순</option>
+            <option value="wrong">오답 많은 순</option>
+            <option value="number">문항 번호 순</option>
+          </select>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.9em;color:#ccc">
+            <input type="checkbox" id="analysis-only-wrong" onchange="renderAnalysis()"> 오답 있는 문제만
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:.9em;color:#ccc">
+            <input type="checkbox" id="analysis-show-answer" onchange="renderAnalysis()"> 정답 표시
+          </label>
+        </div>
+        <div id="analysis-wrap"><div class="loading"><div class="spinner"></div></div></div>
+        <div id="answerlog-wrap" class="hidden" style="text-align:left">
+          <div id="anslog-players">
+            <p style="color:#aaa;margin-bottom:15px;font-size:.9em">현재 랭크에 등록된 플레이어를 클릭하면 그 사람이 푼 문제와 답을 확인합니다</p>
+            <div id="anslog-player-list"><div class="loading"><div class="spinner"></div></div></div>
+          </div>
+          <div id="anslog-player-detail" class="hidden"></div>
+        </div>
       </div>
     </div>
     <div style="text-align:center;margin-top:15px">
       <button class="btn btn-secondary" onclick="goStart()">돌아가기</button>
+    </div>
+  </div>
+  <div id="admin-modal" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3>관리자 인증</h3>
+      <p class="modal-sub">비밀번호를 입력해주세요</p>
+      <input type="password" id="admin-pw" placeholder="비밀번호">
+      <div class="modal-btns">
+        <button class="btn btn-primary" onclick="adminLogin()">확인</button>
+        <button class="btn btn-secondary" onclick="adminCancel()">취소</button>
+      </div>
     </div>
   </div>
 </div>
@@ -595,47 +629,97 @@ async function loadRanking(containerId,myScore){
 
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 
-async function loadAnswerLog(){
-  const list=document.getElementById('answerlog-list');
-  const count=document.getElementById('anslog-count');
-  list.innerHTML='<div class="loading"><div class="spinner"></div></div>';
-  count.textContent='';
-  if(!firebaseReady){list.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
+window.playerList=[];
+async function loadPlayers(){
+  document.getElementById('anslog-player-detail').classList.add('hidden');
+  document.getElementById('anslog-players').classList.remove('hidden');
+  const wrap=document.getElementById('anslog-player-list');
+  wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-    const snap=await db.ref('qlog').orderByChild('date').limitToLast(100).once('value');
-    let data=[];snap.forEach(c=>{data.push(c.val())});data.reverse();
-    count.textContent=data.length+'건';
-    if(data.length===0){list.innerHTML='<p style="color:#aaa;padding:20px">아직 기록이 없습니다</p>';return}
+    const snap=await db.ref('rankings').orderByChild('score').limitToLast(50).once('value');
+    let data=[];snap.forEach(c=>data.push({key:c.key,val:c.val()}));data.reverse();
+    playerList=data.map(r=>r.val.nickname);
+    if(data.length===0){wrap.innerHTML='<p style="color:#aaa;padding:20px">아직 랭킹 데이터가 없습니다</p>';return}
+    const medals=['1st','2nd','3rd'];
     let html='';
+    data.forEach((r,i)=>{
+      const tm=Math.floor(r.val.time/60),ts=r.val.time%60;
+      const medal=i<3?`<span class="player-medal">${medals[i]}</span>`:'';
+      html+=`<div class="player-item" onclick="showPlayerDetail(${i})">
+        <span class="player-name">${medal}${esc(r.val.nickname)}</span>
+        <span style="text-align:right">
+          <div class="player-score">${r.val.score}점</div>
+          <div class="player-time">${r.val.correct}/${r.val.total} · ${tm}분 ${ts}초</div>
+        </span>
+      </div>`;
+    });
+    wrap.innerHTML=html;
+  }catch(e){wrap.innerHTML='<p style="color:#aaa;padding:20px">플레이어 목록 불러오기 실패</p>'}
+}
+window.showPlayerDetail=async function(i){
+  const nick=playerList[i];
+  document.getElementById('anslog-players').classList.add('hidden');
+  const det=document.getElementById('anslog-player-detail');
+  det.classList.remove('hidden');
+  det.innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  if(!firebaseReady){det.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
+  try{
+    const snap=await db.ref('qlog').orderByChild('nickname').equalTo(nick).limitToLast(300).once('value');
+    let data=[];snap.forEach(c=>data.push({key:c.key,val:c.val()}));
+    data.sort((a,b)=>b.val.date-a.val.date);
+    if(data.length===0){
+      det.innerHTML=`<div class="detail-back"><div><h3>${esc(nick)}</h3></div><button class="btn btn-secondary" onclick="loadPlayers()">뒤로</button></div><p style="color:#aaa;padding:20px">답안 기록이 없습니다</p>`;
+      return;
+    }
+    let html=`<div class="detail-back"><div><h3>${esc(nick)} · 총 ${data.length}문제</h3></div><button class="btn btn-secondary" onclick="loadPlayers()">뒤로</button></div>`;
+    let lastSession='';
     data.forEach(r=>{
-      const t=new Date(r.date);
-      const tm=`${String(t.getMonth()+1).padStart(2,'0')}.${String(t.getDate()).padStart(2,'0')} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
-      const got=r.correct?`<span class="ans-got">${esc(r.userAns)}</span>`:`<span class="ans-got wrong">${esc(r.userAns||'(무응답)')} <span style="color:#aaa;font-size:.85em">→ ${esc(r.correctAnswer)}</span></span>`;
+      const v=r.val;
+      const t=new Date(v.date);
+      const session=`${t.getFullYear()}.${String(t.getMonth()+1).padStart(2,'0')}.${String(t.getDate()).padStart(2,'0')} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+      if(session!==lastSession){html+=`<div class="session-tag">${session}</div>`;lastSession=session}
+      const got=v.correct?`<span class="ans-got">${esc(v.userAns)}</span>`:`<span class="ans-got wrong">${esc(v.userAns||'(무응답)')} <span style="color:#aaa;font-size:.85em">→ ${esc(v.correctAnswer)}</span></span>`;
       html+=`<div class="ans-item">
-        <div><span class="ans-result ${r.correct?'y':'n'}">${r.correct?'O':'X'}</span></div>
+        <div><span class="ans-result ${v.correct?'y':'n'}">${v.correct?'O':'X'}</span></div>
         <div>
-          <div class="ans-q">${esc(r.q)}</div>
-          <div class="ans-meta">${esc(r.nickname)} · ${esc(r.cat)} · ${tm}</div>
+          <div class="ans-q">${esc(v.q)}</div>
+          <div class="ans-meta">${esc(v.cat)}</div>
         </div>
         <div class="ans-user">${got}</div>
       </div>`;
     });
-    list.innerHTML=html;
-  }catch(e){list.innerHTML='<p style="color:#aaa;padding:20px">답안 기록 불러오기 실패</p>'}
-}
-window.clearAnswerLog=async function(){
-  if(!confirm('전체 답안 기록을 삭제할까요?'))return;
-  try{await db.ref('qlog').set(null);loadAnswerLog()}catch(e){alert('삭제 실패')}
+    det.innerHTML=html;
+  }catch(e){det.innerHTML='<p style="color:#aaa;padding:20px">답안 기록 불러오기 실패</p>'}
 }
 
 window.showAnalysis=function(){
-  const pw=prompt('관리자 비밀번호를 입력하세요');
-  if(pw!==ADMIN_PW){alert('비밀번호가 틀렸습니다.');return}
   showScreen('screen-analysis');
+  const m=document.getElementById('admin-modal');
+  m.classList.remove('hidden');
+  document.getElementById('admin-pw').value='';
+  setTimeout(()=>document.getElementById('admin-pw').focus(),60);
+};
+window.adminLogin=function(){
+  const pw=document.getElementById('admin-pw').value;
+  if(pw!==ADMIN_PW){shake('admin-modal');document.getElementById('admin-pw').value='';return}
+  document.getElementById('admin-modal').classList.add('hidden');
+  document.getElementById('analysis-content').classList.remove('hidden');
   loadAnalysis();
   showAnalysisTab('stats');
-  loadAnswerLog();
+  loadPlayers();
 };
+window.adminCancel=function(){document.getElementById('admin-modal').classList.add('hidden');showScreen('screen-start')};
+function shake(id){
+  const el=document.getElementById(id).firstElementChild;
+  el.classList.add('shake');
+  setTimeout(()=>el.classList.remove('shake'),500);
+}
+document.addEventListener('keydown',function(e){
+  if(e.key==='Enter'&&!document.getElementById('admin-modal').classList.contains('hidden')){
+    adminLogin();
+  }
+});
 window.showAnalysisTab=function(t){
   document.getElementById('tab-stats').classList.toggle('tab-active',t==='stats');
   document.getElementById('tab-log').classList.toggle('tab-active',t==='log');
