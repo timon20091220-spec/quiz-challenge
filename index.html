@@ -192,6 +192,14 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .qt-btn.del{background:#3a1616;color:#f44336}
 .qt-btn.del:hover{background:#571f1f}
 @media(max-width:500px){.qf-2col{grid-template-columns:1fr}.quest-item{flex-direction:column;align-items:flex-start}}
+@media(max-width:600px){
+  body{align-items:flex-start;padding:14px 0 30px}
+  .answer-input{font-size:1em;padding:14px 16px}
+  .ranking-table{font-size:.75em}
+  .ranking-table th,.ranking-table td{padding:7px 6px}
+  .ranking-table .rank-name{max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rank-title{font-size:1em}
+}
 .chk{width:42px;height:26px;display:inline-flex;align-items:center;cursor:pointer}
 @media(max-width:500px){.logo{font-size:2em}.question-text{font-size:1.05em}.score-details{grid-template-columns:1fr}.quiz-header{flex-direction:column;align-items:flex-start}.option-grid{grid-template-columns:1fr}}
 </style>
@@ -913,7 +921,9 @@ function init(){
 }
 window.googleLogin=async function(){
   try{
-    await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    const provider=new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({prompt:'select_account'});
+    await firebase.auth().signInWithPopup(provider);
   }catch(e){
     const c=e.code||'';
     if(c==='auth/popup-blocked')alert('팝업이 차단되었습니다. 주소창의 팝업 차단을 허용한 뒤 다시 시도해주세요.');
@@ -925,7 +935,9 @@ window.googleLogin=async function(){
 window.googleSignup=async function(){
   pendingSignup=true;
   try{
-    await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    const provider=new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({prompt:'select_account'});
+    await firebase.auth().signInWithPopup(provider);
     const u=firebase.auth().currentUser;
     if(u){
       try{await db.ref('registered/'+u.uid).set({at:Date.now()})}catch(e){console.warn('가입 기록 저장 실패:',e)}
@@ -1521,6 +1533,12 @@ window.adminQuizChanged=function(){
 };
 document.addEventListener('keydown',function(e){
   if(e.key==='Enter'&&!document.getElementById('email-modal').classList.contains('hidden'))emailLogin();
+});
+document.addEventListener('focusin',function(e){
+  if(e.target&&e.target.id==='answer-input'&&document.getElementById('screen-quiz')){
+    if(document.getElementById('screen-quiz').classList.contains('hidden'))return;
+    setTimeout(()=>{try{e.target.scrollIntoView({block:'center'})}catch(_){e.target.scrollIntoView()}},350);
+  }
 });
 window.showAnalysisTab=function(t){
   adminTab=t;
