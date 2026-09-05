@@ -675,40 +675,45 @@ async function finishQuiz(){
     document.getElementById('review-list').innerHTML=html;
   }else{rw.classList.add('hidden')}
   if(firebaseReady){
-    try{
-      const snap=await db.ref('rankings').once('value');
-      let exists=false;
-      snap.forEach(c=>{if(c.val().nickname===nickname)exists=true});
-      if(exists){
-        // 이미 같은 닉네임이 기록되어 있으면 무시 (첫 번째 것만 기록 유지)
-        console.log('이미 랭킹에 등록된 닉네임입니다. 첫 기록이 유지됩니다.');
-      }else{
-        db.ref('rankings').push({nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
-      }
-    }catch(e){console.warn('랭킹 저장 실패:',e)}
-    try{
-      const stRef=db.ref('qstats');
-      for(const a of attemptLog){
-        await stRef.child(String(a.id)).transaction(s=>{
+    (async()=>{
+      let saved=false;
+      try{
+        const snap=await db.ref('rankings').once('value');
+        let exists=false;
+        snap.forEach(c=>{if(c.val().nickname===nickname)exists=true});
+        if(exists){
+          // 이미 같은 닉네임이 기록되어 있으면 무시 (첫 번째 것만 기록 유지)
+          console.log('이미 랭킹에 등록된 닉네임입니다. 첫 기록이 유지됩니다.');
+        }else{
+          await db.ref('rankings').push({nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
+          saved=true;
+        }
+      }catch(e){console.warn('랭킹 저장 실패:',e)}
+      try{
+        const stRef=db.ref('qstats');
+        const txs=attemptLog.map(a=>stRef.child(String(a.id)).transaction(s=>{
           s=s||{tries:0,wrong:0};
           s.tries++;
           if(a.wrong)s.wrong++;
           return s;
+        }));
+        await Promise.allSettled(txs);
+      }catch(e){console.warn('문항 통계 저장 실패:',e)}
+      try{
+        const logMap={};attemptLog.forEach(a=>logMap[a.id]=a);
+        const qlRef=db.ref('qlog'),now=Date.now();
+        const writes=currentQuiz.map(q=>{
+          const a=logMap[q.id];
+          if(!a)return Promise.resolve();
+          const correctAnswer=q.t==='객관식'?q.o[q.a]:q.a[0];
+          return qlRef.push({nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
         });
-      }
-    }catch(e){console.warn('문항 통계 저장 실패:',e)}
-    try{
-      const logMap={};attemptLog.forEach(a=>logMap[a.id]=a);
-      const qlRef=db.ref('qlog'),now=Date.now();
-      for(const q of currentQuiz){
-        const a=logMap[q.id];
-        if(!a)continue;
-        const correctAnswer=q.t==='객관식'?q.o[q.a]:q.a[0];
-        await qlRef.push({nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
-      }
-    }catch(e){console.warn('답안 기록 저장 실패:',e)}
+        await Promise.allSettled(writes);
+      }catch(e){console.warn('답안 기록 저장 실패:',e)}
+      if(saved)loadRanking('ranking-result-wrap',pct);
+    })();
   }
-  setTimeout(()=>loadRanking('ranking-result-wrap',pct),500);
+  setTimeout(()=>loadRanking('ranking-result-wrap',pct),600);
 }
 
 async function loadRanking(containerId,myScore){
