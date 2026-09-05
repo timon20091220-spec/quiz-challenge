@@ -169,6 +169,11 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 </head>
 <body>
 <div class="container">
+<div id="screen-checking" class="screen">
+    <div class="logo" style="font-size:1.6em">퀴즈챌린지</div>
+    <div class="loading" style="margin:24px 0 10px"><div class="spinner"></div></div>
+    <p style="color:#aaa">로그인 상태 확인 중...</p>
+  </div>
 <div id="screen-start" class="screen hidden">
     <div class="logo">퀴즈챌린지</div>
     <div id="auth-pre" style="margin-top:18px">
@@ -181,6 +186,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
         <div style="display:flex;align-items:center;justify-content:center;gap:10px">
           <span id="nick-display" style="font-weight:800;font-size:1.3em;color:#ffd200"></span>
         </div>
+        <p id="login-note" style="color:#666;font-size:.78em;margin-top:8px"></p>
       </div>
       <div id="quiz-btns" style="display:flex;flex-direction:column;align-items:center;gap:10px"></div>
       <div style="display:flex;justify-content:center;gap:10px;margin-top:18px;flex-wrap:wrap">
@@ -747,6 +753,8 @@ window.updateStartUI=function(){
   const pre=document.getElementById('auth-pre'),menu=document.getElementById('quiz-menu');
   pre.classList.toggle('hidden',!!authUser);
   menu.classList.toggle('hidden',!authUser);
+  const note=document.getElementById('login-note');
+  if(note)note.textContent=authUser?((authUser.email||'(구글 계정)')+' · 로그인됨'):'';
   if(authUser){
     document.getElementById('nick-wrap').classList.remove('hidden');
     document.getElementById('admin-btn').classList.toggle('hidden',!isAdmin);
@@ -776,13 +784,23 @@ window.openQuizLobby=function(qid){
   document.getElementById('ql-user').textContent=nickname?(nickname+' 님'):'';
   showScreen('screen-quiz-lobby');
 };
+function routeAfterAuth(){
+  if(!firebaseReady||!authUser){showScreen('screen-start');return}
+  if(nickname==='')showScreen('screen-nickname');
+  else showScreen('screen-start');
+}
 function init(){
   allQuestions.forEach((q,i)=>q.id=i);
   ensureQuest('common');
-  showScreen('screen-start');
+  showScreen('screen-checking');
   updateStartUI();
-try{
+  let authResolved=false;
+  setTimeout(()=>{
+    if(!authResolved){routeAfterAuth();}
+  },6000);
+  try{
     firebase.auth().onAuthStateChanged(user=>{
+      authResolved=true;
       authUser=user||null;
       isAdmin=!!user&&user.email===ADMIN_EMAIL;
       uid=user?user.uid:'';
@@ -794,16 +812,16 @@ try{
           try{await db.ref('sessions/'+uid).set({sid:mySid,at:Date.now()})}catch(e){}
           startSessionWatch();
           updateStartUI();
-          if(stored==='')showScreen('screen-nickname');
+          routeAfterAuth();
         })();
       }else{
         nickname='';
         stopSessionWatch();
         updateStartUI();
-        showScreen('screen-start');
+        routeAfterAuth();
       }
     });
-  }catch(e){}
+  }catch(e){authResolved=true;routeAfterAuth()}
 }
 window.googleLogin=async function(){
   try{
