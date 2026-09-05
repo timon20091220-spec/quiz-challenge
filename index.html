@@ -94,7 +94,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .tab-btn{padding:10px 22px;border:none;border-radius:10px;font-size:.95em;font-weight:700;cursor:pointer;background:#333;color:#aaa;transition:all .2s}
 .tab-btn.tab-active{background:linear-gradient(90deg,#f7971e,#ffd200);color:#1a1a2e}
 .tab-btn:not(.tab-active):hover{color:#fff}
-.ans-item{display:grid;grid-template-columns:26px 1fr auto;gap:8px;padding:12px 6px;border-bottom:1px solid rgba(255,255,255,.07);font-size:.9em;align-items:center}
+.ans-item{display:grid;grid-template-columns:44px 1fr auto;gap:8px;padding:12px 6px;border-bottom:1px solid rgba(255,255,255,.07);font-size:.9em;align-items:center}
 .ans-item:last-child{border-bottom:none}
 .ans-result{display:inline-block;min-width:44px;text-align:center;padding:3px 8px;border-radius:8px;font-size:.78em;font-weight:700}
 .ans-result.y{background:rgba(76,175,80,.18);color:#4caf50}
@@ -268,16 +268,16 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
             </div>
             <div id="qf-obj" class="hidden">
               <label class="qf-label">보기 (4개)</label>
-              <input id="qf-o1" class="qf-input" placeholder="보기 1">
-              <input id="qf-o2" class="qf-input" placeholder="보기 2">
-              <input id="qf-o3" class="qf-input" placeholder="보기 3">
-              <input id="qf-o4" class="qf-input" placeholder="보기 4">
+              <input id="qf-o1" class="qf-input" placeholder="보기 1" autocomplete="off">
+              <input id="qf-o2" class="qf-input" placeholder="보기 2" autocomplete="off">
+              <input id="qf-o3" class="qf-input" placeholder="보기 3" autocomplete="off">
+              <input id="qf-o4" class="qf-input" placeholder="보기 4" autocomplete="off">
               <label class="qf-label">정답 위치</label>
               <select id="qf-a" class="qf-input"><option value="0">보기 1</option><option value="1">보기 2</option><option value="2">보기 3</option><option value="3">보기 4</option></select>
             </div>
             <div id="qf-subj" class="hidden">
               <label class="qf-label">정답 (여러 개는 쉼표로 구분)</label>
-              <input id="qf-ans" class="qf-input" placeholder="예: 이성계, 태조">
+              <input id="qf-ans" class="qf-input" placeholder="예: 이성계, 태조" autocomplete="off">
             </div>
             <label class="qf-label">해설</label>
             <textarea id="qf-e" class="qf-input" rows="2"></textarea>
@@ -289,7 +289,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
           <div id="quest-list-view">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap">
               <button class="btn btn-primary" style="padding:10px 18px;font-size:.9em;margin:0" onclick="openQuestForm()">+ 새 문제 추가</button>
-              <input type="text" id="quest-search" placeholder="문제 검색..." class="analysis-select" style="flex:1;min-width:140px" oninput="renderQuestList()">
+              <input type="text" id="quest-search" placeholder="문제 검색..." class="analysis-select" style="flex:1;min-width:140px" oninput="renderQuestList()" autocomplete="off">
             </div>
             <div id="quest-list"><div class="loading"><div class="spinner"></div></div></div>
           </div>
@@ -304,7 +304,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
     <div class="modal-card">
       <h3>관리자 인증</h3>
       <p class="modal-sub">비밀번호를 입력해주세요</p>
-      <input type="password" id="admin-pw" placeholder="비밀번호" autocomplete="new-password">
+      <input type="password" id="admin-pw" placeholder="비밀번호" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
       <div class="modal-btns">
         <button class="btn btn-primary" onclick="adminLogin()">확인</button>
         <button class="btn btn-secondary" onclick="adminCancel()">취소</button>
@@ -784,27 +784,35 @@ window.showPlayerDetail=async function(i){
     const val=await restJson('/qlog');
     let data=[];
     if(val)Object.keys(val).forEach(k=>{const v=val[k];if(v&&v.nickname===nick)data.push({key:k,val:v})});
-    data.sort((a,b)=>b.val.date-a.val.date);
+    data.sort((a,b)=>a.val.date-b.val.date);
     if(data.length===0){
       det.innerHTML=`<div class="detail-back"><div><h3>${esc(nick)}</h3></div><button class="btn btn-secondary" onclick="loadPlayers()">뒤로</button></div><p style="color:#aaa;padding:20px">답안 기록이 없습니다</p>`;
       return;
     }
-    let html=`<div class="detail-back"><div><h3>${esc(nick)} · 총 ${data.length}문제</h3></div><button class="btn btn-secondary" onclick="loadPlayers()">뒤로</button></div>`;
-    let lastSession='';
+    const byDate=new Map();
     data.forEach(r=>{
-      const v=r.val;
-      const t=new Date(v.date);
-      const session=`${t.getFullYear()}.${String(t.getMonth()+1).padStart(2,'0')}.${String(t.getDate()).padStart(2,'0')} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
-      if(session!==lastSession){html+=`<div class="session-tag">${session}</div>`;lastSession=session}
-      const got=v.correct?`<span class="ans-got">${esc(v.userAns)}</span>`:`<span class="ans-got wrong">${esc(v.userAns||'(무응답)')} <span style="color:#aaa;font-size:.85em">→ ${esc(v.correctAnswer)}</span></span>`;
-      html+=`<div class="ans-item">
-        <div><span class="ans-result ${v.correct?'y':'n'}">${v.correct?'O':'X'}</span></div>
-        <div>
-          <div class="ans-q">${esc(v.q)}</div>
-          <div class="ans-meta">${esc(v.cat)}</div>
-        </div>
-        <div class="ans-user">${got}</div>
-      </div>`;
+      const k=String(r.val.date);
+      if(!byDate.has(k))byDate.set(k,[]);
+      byDate.get(k).push(r);
+    });
+    const attempts=[...byDate.values()];
+    const pad2=n=>String(n).padStart(2,'0');
+    let html=`<div class="detail-back"><div><h3>${esc(nick)} · 총 ${data.length}문제 · ${attempts.length}회 시도</h3></div><button class="btn btn-secondary" onclick="loadPlayers()">뒤로</button></div>`;
+    attempts.forEach((list,ai)=>{
+      const t=new Date(list[0].val.date);
+      html+=`<div class="session-tag">${ai+1}차 시도 <span style="color:#888;font-size:.85em">${t.getFullYear()}.${pad2(t.getMonth()+1)}.${pad2(t.getDate())} ${pad2(t.getHours())}:${pad2(t.getMinutes())}</span></div>`;
+      list.forEach(r=>{
+        const v=r.val;
+        const got=v.correct?`<span class="ans-got">${esc(v.userAns)}</span>`:`<span class="ans-got wrong">${esc(v.userAns||'(무응답)')} <span style="color:#aaa;font-size:.85em">→ ${esc(v.correctAnswer)}</span></span>`;
+        html+=`<div class="ans-item">
+          <div><span class="ans-result ${v.correct?'y':'n'}">${v.correct?'O':'X'}</span></div>
+          <div>
+            <div class="ans-q">${esc(v.q)}</div>
+            <div class="ans-meta">${esc(v.cat)}</div>
+          </div>
+          <div class="ans-user">${got}</div>
+        </div>`;
+      });
     });
     det.innerHTML=html;
   }catch(e){det.innerHTML='<p style="color:#aaa;padding:20px">답안 기록 불러오기 실패</p>'}
