@@ -696,6 +696,11 @@ function baseQuestions(qid){
 function questNodePath(qid){return qid==='common'?'/quest':'/quest/'+qid}
 function rankNodePath(qid){return qid==='common'?'rankings':'rankings/'+qid}
 function statsNodePath(qid){return qid==='common'?'/qstats':'/qstats/'+qid}
+function statKey(text,cat){
+  const t=String(text||'')+'|'+String(cat||'');
+  let h=0;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))>>>0;
+  return h.toString(16);
+}
 
 async function ensureQuest(qid){
   if(!qid)qid='common';
@@ -1193,7 +1198,7 @@ function startQTimer(){
 function handleTimeout(){
   if(answered)return;
   const q=currentQuiz[currentIdx],isObj=q.t==='객관식';
-  answered=true;q.userWrong=true;score=score;attemptLog.push({id:q.id,wrong:true});
+  answered=true;q.userWrong=true;score=score;attemptLog.push({id:q.id,wrong:true,t:q.q,c:q.cat});
   document.getElementById('answer-result').textContent='시간초과!';
   document.getElementById('answer-result').className='answer-result is-wrong';
   if(!isObj){const input=document.getElementById('answer-input');input.disabled=true}
@@ -1248,7 +1253,7 @@ window.submitAnswer=function(){
   if(answered)return;
   clearInterval(qTimerInterval);
   const q=currentQuiz[currentIdx],isObj=q.t==='객관식';
-  const logAttempt=(wrong,ans)=>attemptLog.push({id:q.id,wrong,ans:ans||''});
+  const logAttempt=(wrong,ans)=>attemptLog.push({id:q.id,wrong,ans:ans||'',t:q.q,c:q.cat});
   if(isObj){
     if(selectedOption===-1){alert('보기를 선택해주세요.');return}
     answered=true;
@@ -1338,14 +1343,14 @@ async function finishQuiz(){
       }catch(e){console.warn('랭킹 저장 실패:',e)}
       try{
         const stRef=db.ref(curQuizId==='common'?'qstats':'qstats/'+curQuizId);
-        const txs=attemptLog.map(a=>stRef.child(String(a.id)).transaction(s=>{
+        const txs=attemptLog.map(a=>stRef.child(statKey(a.t,a.c)).transaction(s=>{
           s=s||{tries:0,wrong:0};
           s.tries++;
           if(a.wrong)s.wrong++;
           return s;
         }));
         await Promise.allSettled(txs);
-        attemptLog.forEach(a=>fsInc('qstats',curQuizId+'_'+a.id,{tries:1,wrong:a.wrong?1:0}));
+        attemptLog.forEach(a=>fsInc('qstats',curQuizId+'_'+statKey(a.t,a.c),{tries:1,wrong:a.wrong?1:0}));
       }catch(e){console.warn('문항 통계 저장 실패:',e)}
       try{
         const logMap={};attemptLog.forEach(a=>logMap[a.id]=a);
@@ -1569,8 +1574,8 @@ async function loadAnalysis(){
     const val=await restJson(adminQuiz==='common'?'/qstats':'/qstats/'+adminQuiz);
     const stats={};
     if(val)Object.keys(val).forEach(k=>{stats[k]=val[k]});
-    analysisStats=getQuestionPool(adminQuiz).map(q=>{
-      const s=stats[q.id]||{tries:0,wrong:0};
+analysisStats=getQuestionPool(adminQuiz).map(q=>{
+      const s=stats[statKey(q.q,q.cat)]||{tries:0,wrong:0};
       return {q:q,tries:s.tries||0,wrong:s.wrong||0};
     });
     renderAnalysis();
