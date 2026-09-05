@@ -1000,7 +1000,7 @@ window.saveQuest=async function(){
   }
   try{
     const dest=key||(await db.ref('quest').push()).key;
-    await db.ref('quest').child(dest).set({...obj,key:undefined});
+    await db.ref('quest').child(dest).set(obj);
     questData=null;
     await ensureQuest();
     closeQuestForm();
