@@ -242,7 +242,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
   </div>
   <div id="screen-mymenu" class="screen hidden">
     <div class="logo" style="font-size:2em">MY</div>
-    <div class="ranking-card" style="text-align:center;width:min(92%,360px)">
+    <div class="ranking-card" style="text-align:center;width:min(92%,360px);margin:0 auto">
       <div style="padding:6px 0;word-break:break-all"><span style="color:#aaa">계정</span><br><b id="my-email" style="word-break:break-all"></b><span id="my-badge"></span></div>
       <div style="padding:6px 0"><span style="color:#aaa">닉네임</span><br><b id="my-nickname" style="color:#ffd200"></b></div>
     </div>
@@ -1372,9 +1372,11 @@ async function loadRanking(containerId,myScore,qid){
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-    const val=await restJson('/'+rankNodePath(qid));
+const val=await restJson('/'+rankNodePath(qid));
     let data=[];
     if(val)Object.keys(val).forEach(k=>data.push(val[k]));
+    const seen={};data.forEach(r=>{const e=seen[r.nickname];if(!e||((r.date||0)<(e.date||0)))seen[r.nickname]=r});
+    data=Object.values(seen);
     data.sort((a,b)=>(b.score-a.score)||(a.time-b.time));
     data=data.slice(0,50);
     if(data.length===0){wrap.innerHTML='<p style="color:#aaa;padding:20px">아직 랭킹 데이터가 없습니다</p>';return}
@@ -1402,9 +1404,11 @@ async function loadPlayers(qid){
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-    const val=await restJson('/'+rankNodePath(qid));
+const val=await restJson('/'+rankNodePath(qid));
     let data=[];
     if(val)Object.keys(val).forEach(k=>data.push({key:k,val:val[k]}));
+    const seen={};data.forEach(r=>{const e=seen[r.val.nickname];if(!e||((r.val.date||0)<(e.val.date||0)))seen[r.val.nickname]=r});
+    data=Object.values(seen);
     data.sort((a,b)=>(b.val.score-a.val.score)||(a.val.time-b.val.time));
     playerList=data.map(r=>r.val.nickname);
     if(data.length===0){wrap.innerHTML='<p style="color:#aaa;padding:20px">아직 랭킹 데이터가 없습니다</p>';return}
