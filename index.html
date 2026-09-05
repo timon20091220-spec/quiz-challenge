@@ -115,6 +115,12 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 @keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
 .modal-btns{display:flex;gap:12px;justify-content:center}
 .modal-btns .btn{margin:0;padding:12px 30px}
+.modal-card input[type=email]{letter-spacing:0}
+.quiz-menu-item{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;width:min(92%,430px);transition:border .2s}
+.quiz-menu-item:hover{border-color:rgba(255,210,0,.5)}
+.rank-title{font-weight:800;font-size:1.15em;color:#ffd200;margin:8px 0 16px;text-align:center}
+.analysis-select{background:#0f0c29;color:#fff;border:2px solid #444;border-radius:10px;padding:10px 14px;font-size:1em;outline:none;cursor:pointer}
+.analysis-select:focus{border-color:#ffd200}
 .player-item{display:flex;justify-content:space-between;align-items:center;padding:15px 16px;border:1px solid rgba(255,255,255,.09);border-radius:12px;margin-bottom:8px;cursor:pointer;background:rgba(255,255,255,.04);transition:all .2s}
 .player-item:hover{border-color:#ffd200;background:rgba(255,210,0,.08);transform:translateX(3px)}
 .player-name{font-weight:700;font-size:1.05em;display:flex;align-items:center;gap:8px}
@@ -156,16 +162,26 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <body>
 <div class="container">
   <div id="screen-start" class="screen hidden">
-    <div class="logo">상식퀴즈 챌린지</div>
-    <p class="subtitle">128문제 중 32문제를 랜덤으로 출제합니다<br>주관식 + 객관식 혼합 / 역사 / 과학 / 재밌는</p>
-    <div class="input-group">
-      <label for="nickname">닉네임</label>
-      <input type="text" id="nickname" placeholder="닉네임을 입력하세요" maxlength="20" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
+    <div class="logo">퀴즈챌린지</div>
+    <div id="auth-pre" style="margin-top:18px">
+      <button class="btn btn-primary" style="margin:6px 4px" onclick="googleLogin()">Google로 로그인</button>
+      <button class="btn btn-secondary" style="margin:6px 4px" onclick="openEmailLogin()">이메일 로그인</button>
     </div>
-    <div style="margin-top:20px">
-      <button class="btn btn-primary" onclick="startQuiz()">퀴즈 시작</button>
-      <button class="btn btn-secondary" onclick="showRankingOnly()">랭킹 보기</button>
-      <button class="btn btn-secondary" onclick="showAnalysis()">문항 분석</button>
+    <div id="auth-post" class="hidden" style="margin-top:18px">
+      <p style="color:#aaa;font-size:.9em;margin-bottom:10px;word-break:break-all"><span id="auth-email"></span> <span id="auth-badge"></span></p>
+      <button class="btn btn-secondary" style="padding:8px 16px;font-size:.85em" onclick="logout()">로그아웃</button>
+    </div>
+    <div id="quiz-menu" class="hidden" style="margin-top:20px">
+      <div id="quiz-btns" style="display:flex;flex-direction:column;align-items:center;gap:10px"></div>
+      <div id="nick-wrap" class="hidden" style="margin-top:20px">
+        <div class="input-group" style="text-align:center">
+          <label for="nickname">닉네임</label>
+          <input type="text" id="nickname" placeholder="닉네임을 입력하세요" maxlength="20" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
+        </div>
+      </div>
+      <div id="admin-btn-wrap" class="hidden" style="margin-top:18px">
+        <button class="btn btn-secondary" onclick="showAnalysis()">관리자 · 문항 분석</button>
+      </div>
     </div>
   </div>
   <div id="screen-quiz" class="screen hidden">
@@ -225,6 +241,9 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
       <h2 style="margin-bottom:5px">관리자 전용</h2>
       <p style="color:#aaa;margin-bottom:15px;font-size:.9em">문항 오답률 · 답안 기록 분석</p>
       <div id="analysis-content" class="hidden">
+        <div style="text-align:center;margin-bottom:16px">
+          <select id="admin-qsel" class="analysis-select" onchange="adminQuizChanged()"></select>
+        </div>
         <div style="display:flex;justify-content:center;gap:10px;margin-bottom:20px">
           <button id="tab-stats" class="tab-btn tab-active" onclick="showAnalysisTab('stats')">오답률 분석</button>
           <button id="tab-log" class="tab-btn" onclick="showAnalysisTab('log')">답안 기록</button>
@@ -301,25 +320,101 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
       <button class="btn btn-secondary" onclick="goStart()">돌아가기</button>
     </div>
   </div>
-  <div id="admin-modal" class="modal-overlay hidden">
+  <div id="email-modal" class="modal-overlay hidden">
     <div class="modal-card">
-      <h3>관리자 인증</h3>
-      <p class="modal-sub">비밀번호를 입력해주세요</p>
-      <input type="password" id="admin-pw" placeholder="비밀번호" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
+      <h3 id="email-modal-title">이메일 로그인</h3>
+      <p class="modal-sub" id="email-modal-sub">계정 정보를 입력해주세요</p>
+      <input type="email" id="em-email" placeholder="이메일" autocomplete="off">
+      <input type="password" id="em-pw" placeholder="비밀번호" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
       <div class="modal-btns">
-        <button class="btn btn-primary" onclick="adminLogin()">확인</button>
-        <button class="btn btn-secondary" onclick="adminCancel()">취소</button>
+        <button class="btn btn-primary" id="email-modal-btn" onclick="emailLogin()">로그인</button>
+        <button class="btn btn-secondary" onclick="toggleEmailMode()" id="email-mode-btn">회원가입</button>
+        <button class="btn btn-secondary" onclick="closeEmailLogin()">취소</button>
       </div>
     </div>
   </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
 const firebaseConfig={apiKey:"AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k",authDomain:"quiz-ranking-6cb9f.firebaseapp.com",databaseURL:"https://quiz-ranking-6cb9f-default-rtdb.firebaseio.com",projectId:"quiz-ranking-6cb9f",storageBucket:"quiz-ranking-6cb9f.firebasestorage.app",messagingSenderId:"488270918333",appId:"1:488270918333:web:93f4612335b58780b43dd4"};
 const ADMIN_PW='triuytje123!';
 let db,firebaseReady=false;try{firebase.initializeApp(firebaseConfig);db=firebase.database();firebaseReady=true}catch(e){console.warn("파이어베이스 연결 실패:",e)}
+
+const ADMIN_EMAIL='timon20091220@gmail.com';
+const QUIZ_LIST=[
+  {id:'common',title:'상식 퀴즈',desc:'랜덤 32문제 (주관식+객관식)'},
+  {id:'ajaeggae',title:'아재개그 퀴즈',desc:'웃음 참기 대결, 4지선다'},
+  {id:'history',title:'역사 퀴즈',desc:'한국사&세계사 4지선다'}
+];
+const ajaeggaeQuestions=[
+{q:"소가 웃으면?",o:["우하하","음메","하이요","꿀꿀"],a:0,t:"객관식",cat:"재밌는",e:"소는 '무우~'라고 우니까 웃으면 우하하!"},
+{q:"바다가 부끄러우면?",o:["파도가 출렁","온몸이 빨개진다","모래가 숨는다","잔잔해진다"],a:1,t:"객관식",cat:"재밌는",e:"바다가 부끄러우면 온몸이 빨개지고 '해변'이라구요. 바다가 부끄러우면(바다빠져? no) 정답은 온몸이 빨개진다!"},
+{q:"전화기를 물에 빠뜨리면?",o:["수화기","핸드폰","물컹물컹","초록색"],a:0,t:"객관식",cat:"재밌는",e:"집 전화기라서 '수화기'(기(機)가 물에 빠지면 수화기!)"},
+{q:"소가 전화를 하면?",o:["거의 없다","무우우~","야옹","삐리리"],a:0,t:"객관식",cat:"재밌는",e:"소가 전화하는 일은 '거의 없다'! 여기서 소가 우는 '무' 는 웃음소리 뽀인트"},
+{q:"가장 차가운 아이스크림은?",o:["바닐라","초코","민트","다이어트"],a:3,t:"객관식",cat:"재밌는",e:"'다이어트'가 제일 차가워요. '적게 먹는 다이어트'는 요요 오지만 아이스크림 다이어트는 차가움!"},
+{q:"세상에서 가장 못생긴 과일은?",o:["두리안","딸기","사과","망고"],a:1,t:"객관식",cat:"재밌는",e:"'딸기'가 제일 못생겼어요. 딸기(딸기아, 생겼어!)"},
+{q:"우유가 웃으면?",o:["까르르르","프르르","우하하","하하하"],a:0,t:"객관식",cat:"재밌는",e:"우유는 '프르르' 우니까 웃으면 '프르르'~ 아니 이건 우유가 우는거고 웃으면 까르르르! 정답: 까르르르"},
+{q:"개미의 허리는?",o:["잘록하다","굵다","없다","느껴진다"],a:0,t:"객관식",cat:"재밌는",e:"개미의 허리는 '잘록'하다. 개미는 잘록허리니까!"},
+{q:"세상에서 제일 흔한 동물은?",o:["개","고양이","소","닭"],a:2,t:"객관식",cat:"재밌는",e:"'소'가 제일 흔해요. 소는 어디에나 '소소'하게 있으니까!"},
+{q:"세상에서 가장 큰 동물은?",o:["코끼리","고래","기린","능력자"],a:3,t:"객관식",cat:"재밌는",e:"가장 큰 건 '능력자'! 능력이 크니까요. (코끼리가 틀렸어요)"},
+{q:"향수 회사에서 가장 싫어하는 곤충은?",o:["모기","파리","바퀴벌레","쇠똥구리"],a:1,t:"객관식",cat:"재밌는",e:"'파리'가 싫어요. 파리가 향수를 '뿌리까뿌리까' 하니까!"},
+{q:"축구 선수가 사는 집은?",o:["하프타임","골대","베컴하우스","오프사이드"],a:1,t:"객관식",cat:"재밌는",e:"축구 선수는 '골대(골 때리는 집)'에서 살아요! 골대라는 동네가 정답!"},
+{q:"컴퓨터가 춤을 추면?",o:["랜덤퍼","디스코","마우스","빠빠빠"],a:0,t:"객관식",cat:"재밌는",e:"컴퓨터는 '랜덤퍼'~ 랜덤에 맘을 시켜놓고!"},
+{q:"가장 슬픈 버스는?",o:["마을버스","시외버스","관광버스","우등버스"],a:2,t:"객관식",cat:"재밌는",e:"'관광버스'가 제일 슬퍼요. 관광이 아니고 '관(棺)광' 버스니까!"},
+{q:"세상에서 가장 부지런한 동물은?",o:["개미","꿀벌","게으름뱅이","다람쥐"],a:2,t:"객관식",cat:"재밌는",e:"'게으름뱅이'가 제일 부지런해요. 부지런히 게으름만 피우니까!"},
+{q:"누가 가장 뛰어나?",o:["말","사자","왕","토끼"],a:2,t:"객관식",cat:"재밌는",e:"'왕'이 제일 뛰어나요. 하늘 높이 뛰어난 게 아니라 '뛰어나'(도약)니까!"},
+{q:"태양이 사는 곳은?",o:["남극","사막","일출마을","수평선"],a:1,t:"객관식",cat:"재밌는",e:"태양은 '사막'에 살아요. 사막에는 '태양이 사막'(빼곡하게 있음)!"},
+{q:"전화기가 웃으면?",o:["하고하고","땅땅땅","울리고 웃고","찡그린다"],a:0,t:"객관식",cat:"재밌는",e:"전화기는 웃으면 '하고하고'! (하고하고 울리니까)"},
+{q:"가장 빠른 전화기는?",o:["휴대폰","공중전화","현금인출기","비상전화"],a:1,t:"객관식",cat:"재밌는",e:"'공중전화'가 제일 빨라요. 공중에서 하늘을 날면서 걸으니까?"},
+{q:"세상에서 가장 어리석은 사람은?",o:["바보","돌머리","백치미","모범생"],a:3,t:"객관식",cat:"재밌는",e:"'모범생'이 제일 어리석어요. 모범(밤)을 생으로 밖에 라는 건 아니고... 정답: 모범생. 이유: 밤을 생으로 먹으면 속이 안 좋아서!"},
+{q:"번개가 치면?",o:["쾅","번쩍","우르르","벼락치기"],a:3,t:"객관식",cat:"재밌는",e:"번개가 치면 시험공부 '벼락치기'~ 벼락이 치니까!"},
+{q:"세상에서 가장 안전한 화장실은?",o:["비상화장실","일반화장실","휴게소 화장실","학교 화장실"],a:0,t:"객관식",cat:"재밌는",e:"'비상화장실'이 제일 안전해요. 비상시에도 안전하니까!"},
+{q:"오리를 새끼 오리라고 부르면?",o:["덕쿵쾅쾅","아기 오리","오리온","오리고기"],a:0,t:"객관식",cat:"재밌는",e:"새끼 오리를 부르면 '덕쿵쾅쾅' 울리듯 온다는... 실제 정답은 '아기 오리'. (문제에 답이 있네요)"},
+{q:"세상에서 가장 큰 잎은?",o:["모란잎","연꽃잎","괴물잎","무거운잎"],a:2,t:"객관식",cat:"재밌는",e:"'괴물잎'이 제일 커요. 괴물이니까!"},
+{q:"가장 차가운 사람은?",o:["아이스맨","냉혹한 사람","범인","험한 사람"],a:2,t:"객관식",cat:"재밌는",e:"'범인'이 제일 차가워요. 범인은 항상 도망다녀서 시원하다?"},
+{q:"바다의 김은?",o:["마른김","꼬시래기","파래","김해"],a:3,t:"객관식",cat:"재밌는",e:"바다에는 '김해(金海)'가 있어요. 김은 바다에서 자라는 해조류니까요!"},
+{q:"세상에서 가장 부자 동물은?",o:["돼지","황소","백치","두꺼비"],a:1,t:"객관식",cat:"재밌는",e:"'황소'가 제일 부자라는 건 아니고, 황소가 황금을 먹어서 용돈을 번다는 뽀인트!"},
+{q:"가장 비싼 물은?",o:["수소수","생수","바닷물","엑스포수"],a:3,t:"객관식",cat:"재밌는",e:"'엑스포수'가 제일 비싸요. 온천수보다 비싼 엑스포수!"},
+{q:"가장 많이 쓰는 컴퓨터는?",o:["가정용 PC","노트북","택배 PC","폐지 PC"],a:2,t:"객관식",cat:"재밌는",e:"'택배 PC'가 제일 많이 쓰여요. 택배기사님이 하루 종일 들고 다니니까!"},
+{q:"세상에서 가장 조용한 곤충은?",o:["매미","귀뚜라미","나비","메뚜기"],a:2,t:"객관식",cat:"재밌는",e:"'나비'는 소리가 나지 않아서 제일 조용해요. 나비는 조용히 날개를 접고 숨죽이니까!"}
+];
+const historyQuestions=[
+{q:"1894년 조선에서 일어난 대규모 농민 운동은?",o:["동학농민운동","위정척사운동","개화운동","의병운동"],a:0,t:"객관식",cat:"역사",e:"1894년 전라도 고부에서 시작되어 전국으로 퍼진 농민 중심의 개혁운동입니다. 갑오개혁의 계기가 되었습니다."},
+{q:"세종대왕이 재위한 시대는?",o:["조선","고려","신라","백제"],a:0,t:"객관식",cat:"역사",e:"세종대왕은 조선 4대 임금으로 1418~1450년 재위했습니다. 훈민정음, 측우기, 앙부일구 등을 만들었습니다."},
+{q:"임진왜란 당시 수군을 지휘한 장군은?",o:["이순신","권율","곽재우","김시민"],a:0,t:"객관식",cat:"역사",e:"이순신 장군이 한산도대첩, 명량해전 등에서 승리했습니다. '난중일기'의 저자입니다."},
+{q:"한국의 광복(1945년) 직후 세워진 정부 명칭은?",o:["대한민국 임시정부","조선민주주의인민공화국","대한제국","미군정"],a:1,t:"객관식",cat:"역사",e:"1945년 8월 15일 광복 후, 1948년 남쪽에는 대한민국(대한민국 정부), 북쪽에는 조선민주주의인민공화국이 수립되었습니다."},
+{q:"고려를 건국한 인물은?",o:["왕건","궁예","견훤","태조 이성계"],a:0,t:"객관식",cat:"역사",e:"918년 왕건(고려 태조)이 후삼국을 통일하고 고려를 세웠습니다. 수도는 개경(개성)이었습니다."},
+{q:"신라 말기, 후삼국 중 하나인 후백제를 세운 인물은?",o:["견훤","궁예","백제 온조","혜공왕"],a:0,t:"객관식",cat:"역사",e:"900년 견훤이 후백제를 세웠습니다. 궁예는 후고구려(태봉)를 세웠습니다."},
+{q:"한국의 첫 번째 국가로 알려진 나라는?",o:["고조선","부여","옥저","동예"],a:0,t:"객관식",cat:"역사",e:"기원전 2333년 단군이 세운 고조선이 한국 최초의 국가입니다. BC 108년까지 존속했습니다."},
+{q:"1926년 순종 황제 장례일을 계기로 일어난 독립운동은?",o:["6.10 만세운동","3.1운동","광주학생항일운동","의열단 활동"],a:0,t:"객관식",cat:"역사",e:"1926년 6월 10일, 순종의 인산일(장례일)을 계기로 전국에서 만세운동이 일어났습니다. 3.1운동에 이어 이어졌습니다."},
+{q:"고구려의 수도로 옳은 것은?",o:["평양","경주","부여","한성"],a:0,t:"객관식",cat:"역사",e:"고구려는 국내성→평양으로 도읍을 옮겼습니다. 경주는 신라, 부여(사비)는 백제, 한성은 백제 초기였습니다."},
+{q:"일본의 청일전쟁 발발 연도는?",o:["1894년","1876년","1904년","1910년"],a:0,t:"객관식",cat:"역사",e:"1894년 동학농민운동을 틈타 청·일이 전쟁을 벌였고, 일본이 승리해 청에서 조선에 대한 영향력을 얻었습니다."},
+{q:"을사늑약의 결과로 박탈된 것은?",o:["외교권","군대","국토","언론"],a:0,t:"객관식",cat:"역사",e:"1905년 을사늑약으로 조선의 외교권이 일본에 넘어갔습니다. 이에 대한 반대 시위가 격화되었습니다."},
+{q:"세계사에서 로마 제국이 멸망한 해는?",o:["476년","395년","410년","1453년"],a:0,t:"객관식",cat:"역사",e:"서로마 제국은 476년 게르만족의 침입으로 멸망했습니다. 동로마(비잔티움) 제국은 1453년 멸망했습니다."},
+{q:"프랑스 혁명이 일어난 해는?",o:["1789년","1776년","1804년","1848년"],a:0,t:"객관식",cat:"역사",e:"1789년 바스티유 감옥 습격을 시작으로 프랑스 혁명이 발발했습니다. '자유, 평등, 박애'를 내세웠습니다."},
+{q:"미국 독립선언이 발표된 해는?",o:["1776년","1789년","1812년","1763년"],a:0,t:"객관식",cat:"역사",e:"1776년 7월 4일 미국이 영국으로부터의 독립을 선언했습니다. 매년 독립기념일로 기념합니다."},
+{q:"1차 세계대전이 끝난 해는?",o:["1918년","1914년","1939년","1929년"],a:0,t:"객관식",cat:"역사",e:"1914년 시작된 1차 세계대전은 1918년 끝났습니다. 이후 1939년 2차 세계대전이 발발했습니다."},
+{q:"1945년 제2차 세계대전이 끝난 계기는?",o:["히로시마·나가사키 원폭 투하","독일 항복","노르망디 상륙","베를린 함락"],a:0,t:"객관식",cat:"역사",e:"1945년 8월 히로시마·나가사키에 원자폭탄이 투하되면서 8월 15일 일본의 항복으로 전쟁이 끝났습니다."},
+{q:"한국의 최초의 근대적 조약인 강화도조약 체결 연도는?",o:["1876년","1882년","1884년","1905년"],a:0,t:"객관식",cat:"역사",e:"1876년 운요호 사건을 계기로 강화도에서 조선-일본 수호조약(강화도조약)이 체결되었습니다."},
+{q:"아테네 민주정이 발전한 고대 문명은?",o:["그리스","로마","이집트","페르시아"],a:0,t:"객관식",cat:"역사",e:"기원전 5세기 그리스 아테네에서 페리클레스 시대에 직접 민주정이 발전했습니다."},
+{q:"고려 시대 최초로 원나라의 침입을 막아낸 전쟁은?",o:["몽골 침입 저항","거란 침입 저항","왜구 토벌","여진 정벌"],a:0,t:"객관식",cat:"역사",e:"1231년부터 시작된 몽골의 침입에 고려가 약 40년간 항전했습니다. 삼별초의 대몽 항쟁이 유명합니다."},
+{q:"조선 후기 실학을 대표하는 학자는?",o:["정약용","이황","율곡 이이","세종"],a:0,t:"객관식",cat:"역사",e:"정약용(다산)은 '목민심서', '경세유표'를 쓴 실학자입니다. 이황·이이는 성리학자입니다."},
+{q:"백제 성왕 때의 문물교류 대상국은?",o:["일본","당","요","금"],a:0,t:"객관식",cat:"역사",e:"성왕 때 백제는 일본에 불교, 의복, 의약 등 선진 문물을 전수했습니다. 노리사치계 파견이 유명합니다."},
+{q:"삼국이 통일된 순서로 올바른 것은?",o:["신라가 백제·고구려를 통일","고구려가 통일","백제가 통일","가야가 통일"],a:0,t:"객관식",cat:"역사",e:"신라는 나·당 연합으로 660년 백제, 668년 고구려를 멸망시키고 삼국을 통일했습니다."},
+{q:"8·15광복 후 분단이 고착된 계기가 된 전쟁은?",o:["한국전쟁","청일전쟁","러일전쟁","1차 세계대전"],a:0,t:"객관식",cat:"역사",e:"1950년 한국전쟁을 거치며 남북 분단이 고착되었습니다. 1953년 휴전으로 현 체제가 이어졌습니다."},
+{q:"대한제국을 선포한 왕은?",o:["고종","순종","태조","성종"],a:0,t:"객관식",cat:"역사",e:"1897년 고종이 대한제국을 선포하고 황제에 즉위했습니다. 국호를 '대한'으로 바꾸었습니다."},
+{q:"세종대왕이 편찬한 백과사전은?",o:["경제육전","집현전 학자들의 저서","조선왕조실록","일성록"],a:3,t:"객관식",cat:"역사",e:"세종 때 집현전 학자들이 '동국정운', '칠정산' 등 여러 저서를 편찬했으며, 백과사전으로는 '경제육전'이 대표적입니다."},
+{q:"고려 건국 직후 후삼국 통일을 향한 최대 전투는?",o:["고창전투","벽주성 전투","수리성 전투","운주성 전투"],a:0,t:"객관식",cat:"역사",e:"930년 왕건과 후백제 견훤이 맞붙은 일리천 전투(고창 전투)에서 왕건이 승리했습니다."},
+{q:"임진왜란 때 진주성에서 끝까지 싸운 명장은?",o:["김시민","이순신","곽재우","유성룡"],a:0,t:"객관식",cat:"역사",e:"김시민 장군이 1592년 진주성 전투에서 대승을 거두었지만, 1593년 제2차 진주성 전투에서 전사했습니다."},
+{q:"고구려 고국원왕 이전 수도는?",o:["국내성","평양","한성","사비"],a:0,t:"객관식",cat:"역사",e:"고구려 초기 수도는 국내성(족본)이었으며, 이후 평양으로 천도했습니다."},
+{q:"청일전쟁 이후 일본이 독점한 것을 조선이 되찾기 위해 노력한 것은?",o:["철도 부설권","어업권","화폐 개혁","세금 제정"],a:0,t:"객관식",cat:"역사",e:"1897년 대한제국 수립 후 철도 부설권 등 이권을 되찾기 위해 황실 광산·철도 사업을 추진했습니다."},
+{q:"미군정이 펼친 정치 형태는?",o:["군정","민정","과도정부","통일정부"],a:0,t:"객관식",cat:"역사",e:"1945년 8월 이후 한반도 남부는 미군정이 실시되었고, 북부는 소군정이 실시되었습니다."}
+];
+
+let curQuizId='common',adminQuiz='common',authUser=null,isAdmin=false,questCache={},emailMode='login';
 
 async function restJson(path){
   const resp=await fetch('https://quiz-ranking-6cb9f-default-rtdb.firebaseio.com'+path+'.json');
@@ -474,53 +569,153 @@ const allQuestions=[
 {q:"이순신 장군이 사용한 해전 전술 이름은?",a:["학익진"],cat:"재밌는",e:"학익진은 학이 날개를 편 형태의 전법으로, 양날개로 적을 포위하여 공격하는 해전 전술입니다. 한산도대첩에서 결정적으로 사용되었습니다."}
 ];
 
-let currentQuiz=[],currentIdx=0,score=0,answered=false,startTime,timerInterval,timeLeft=1800,nickname='',selectedOption=-1,qTimerInterval=null,attemptLog=[],analysisStats=null,questData=null;
+let currentQuiz=[],currentIdx=0,score=0,answered=false,startTime,timerInterval,timeLeft=1800,nickname='',selectedOption=-1,qTimerInterval=null,attemptLog=[],analysisStats=null;
 
-function init(){
-  allQuestions.forEach((q,i)=>q.id=i);
-  ensureQuest();
-  showScreen('screen-start');
+function baseQuestions(qid){
+  if(qid==='ajaeggae')return ajaeggaeQuestions.map((d,i)=>({...d,id:i}));
+  if(qid==='history')return historyQuestions.map((d,i)=>({...d,id:i}));
+  allQuestions.forEach((q,i)=>{q.id=i});
+  return allQuestions;
 }
-async function ensureQuest(){
-  if(questData!==null)return questData;
-  questData={};
+function questNodePath(qid){return qid==='common'?'/quest':'/quest/'+qid}
+function rankNodePath(qid){return qid==='common'?'rankings':'rankings/'+qid}
+function statsNodePath(qid){return qid==='common'?'/qstats':'/qstats/'+qid}
+
+async function ensureQuest(qid){
+  if(!qid)qid='common';
+  if(questCache[qid]!=null)return questCache[qid];
+  questCache[qid]={};
   try{
-    const d=await restJson('/quest');
-    questData=d||{};
-  }catch(e){console.warn('커스텀 문제 로드 실패:',e);questData={}}
-  return questData;
+    const d=await restJson(questNodePath(qid));
+    questCache[qid]=d||{};
+  }catch(e){questCache[qid]={}}
+  return questCache[qid];
 }
-function getQuestionPool(){
-  const map=questData||{};
-  const out=allQuestions.map((d,i)=>{
+function getQuestionPool(qid){
+  const map=questCache[qid]||{};
+  const base=baseQuestions(qid);
+  const out=base.map((d,i)=>{
     const ov=map[String(i)];
-    if(!ov)return d;
+    if(!ov)return {...d};
     if(ov.remove)return null;
-    const merged={...d,...ov};
-    return merged;
+    return {...d,...ov};
   }).filter(Boolean);
   Object.keys(map).forEach(k=>{
     const v=map[k];
     if(!v||v.remove)return;
-    if(v.custom===true){v.id=k;out.push(v)}
+    if(v.custom===true)out.push({...v,id:k});
   });
   return out;
 }
+
+window.updateStartUI=function(){
+  const pre=document.getElementById('auth-pre'),post=document.getElementById('auth-post'),menu=document.getElementById('quiz-menu');
+  pre.classList.toggle('hidden',!!authUser);
+  post.classList.toggle('hidden',!authUser);
+  menu.classList.toggle('hidden',!authUser);
+  if(authUser){
+    document.getElementById('auth-email').textContent=authUser.email||'(구글 계정)';
+    document.getElementById('auth-badge').textContent=isAdmin?'· 관리자':'';
+    document.getElementById('nick-wrap').classList.remove('hidden');
+    document.getElementById('admin-btn-wrap').classList.toggle('hidden',!isAdmin);
+    renderQuizButtons();
+  }
+};
+function renderQuizButtons(){
+  const wrap=document.getElementById('quiz-btns');
+  let html='';
+  QUIZ_LIST.forEach(q=>{
+    html+=`<div class="quiz-menu-item">
+      <div style="flex:1;text-align:left">
+        <div style="font-weight:700">${esc(q.title)}</div>
+        <div style="font-size:.8em;color:#aaa">${esc(q.desc)}</div>
+      </div>
+      <button class="btn btn-primary" style="margin:0;padding:10px 18px;font-size:.9em" onclick="startQuiz('${q.id}')">시작</button>
+      <button class="btn btn-secondary" style="margin:0;padding:10px 14px;font-size:.9em" onclick="showRankingOnly('${q.id}')">랭킹</button>
+    </div>`;
+  });
+  wrap.innerHTML=html;
+}
+function init(){
+  allQuestions.forEach((q,i)=>q.id=i);
+  ensureQuest('common');
+  showScreen('screen-start');
+  updateStartUI();
+  try{
+    firebase.auth().onAuthStateChanged(user=>{
+      authUser=user||null;
+      isAdmin=!!user&&user.email===ADMIN_EMAIL;
+      updateStartUI();
+    });
+  }catch(e){}
+}
+async function init(){}
+window.googleLogin=async function(){
+  try{
+    await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+  }catch(e){
+    if(e.code==='auth/popup-blocked')alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.');
+    else if(e.code==='auth/unauthorized-domain'||e.code==='auth/operation-not-allowed')alert('Firebase 콘솔에서 구글 로그인 프로바이더를 활성화하고, 인증 도메인에 "'+location.hostname+'" 를 추가해야 구글 로그인이 동작합니다.\n(이메일 로그인은 바로 사용 가능)');
+    else alert('구글 로그인 실패: '+(e.message||e.code));
+  }
+};
+window.openEmailLogin=function(){
+  emailMode='login';
+  document.getElementById('email-modal-title').textContent='이메일 로그인';
+  document.getElementById('email-modal-sub').textContent='계정 정보를 입력해주세요';
+  document.getElementById('email-modal-btn').textContent='로그인';
+  document.getElementById('email-mode-btn').textContent='회원가입';
+  document.getElementById('em-email').value='';
+  document.getElementById('em-pw').value='';
+  document.getElementById('email-modal').classList.remove('hidden');
+};
+window.closeEmailLogin=function(){document.getElementById('email-modal').classList.add('hidden')};
+window.toggleEmailMode=function(){
+  emailMode=emailMode==='login'?'signup':'login';
+  document.getElementById('email-modal-title').textContent=emailMode==='signup'?'이메일 회원가입':'이메일 로그인';
+  document.getElementById('email-modal-sub').textContent=emailMode==='signup'?'새 계정을 만들어주세요':'계정 정보를 입력해주세요';
+  document.getElementById('email-modal-btn').textContent=emailMode==='signup'?'가입하기':'로그인';
+  document.getElementById('email-mode-btn').textContent=emailMode==='signup'?'로그인으로 전환':'회원가입';
+};
+window.emailLogin=async function(){
+  const email=document.getElementById('em-email').value.trim();
+  const pw=document.getElementById('em-pw').value;
+  if(!email||!pw){alert('이메일과 비밀번호를 입력해주세요.');return}
+  try{
+    if(emailMode==='signup')await firebase.auth().createUserWithEmailAndPassword(email,pw);
+    else await firebase.auth().signInWithEmailAndPassword(email,pw);
+    closeEmailLogin();
+  }catch(e){
+    if(e.code==='auth/email-already-in-use')alert('이미 가입된 이메일입니다. 로그인으로 전환하거나 비밀번호를 확인해주세요.');
+    else if(e.code==='auth/invalid-email')alert('올바른 이메일 주소가 아닙니다.');
+    else if(e.code==='auth/weak-password')alert('비밀번호는 6자 이상이어야 합니다.');
+    else if(e.code==='auth/user-not-found'||e.code==='auth/wrong-password')alert('이메일 또는 비밀번호가 일치하지 않습니다.');
+    else alert('로그인 실패: '+(e.message||e.code));
+  }
+};
+window.logout=function(){firebase.auth().signOut()};
 window.goStart=function(){showScreen('screen-start')};
 window.showScreen=function(id){document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));document.getElementById(id).classList.remove('hidden')};
-window.showRankingOnly=function(){showScreen('screen-ranking');loadRanking('ranking-standalone-wrap',null)};
+window.showRankingOnly=function(qid){showScreen('screen-ranking');loadRanking('ranking-standalone-wrap',null,qid||curQuizId)};
 
-window.startQuiz=async function(){
+window.startQuiz=async function(qid){
+  qid=qid||curQuizId;
+  curQuizId=qid;
   nickname=document.getElementById('nickname').value.trim();
   if(!nickname){alert('닉네임을 입력해주세요.');return}
-  await ensureQuest();
-  const pool=getQuestionPool();
-  const cats={역사:[],과학:[],재밌는:[]};
-  pool.forEach(q=>{if(cats[q.cat])cats[q.cat].push(q)});
+  await ensureQuest(qid);
+  const pool=getQuestionPool(qid);
+  if(pool.length===0){alert('이 퀴즈에 문제가 없습니다.');return}
+  const cats={};pool.forEach(q=>{if(q.cat){if(!cats[q.cat])cats[q.cat]=[];cats[q.cat].push(q)}});
   Object.values(cats).forEach(a=>shuffle(a));
   currentQuiz=[];
-  Object.values(cats).forEach(a=>{currentQuiz.push(...a.slice(0,Math.ceil(32/3)))});
-  currentQuiz=currentQuiz.slice(0,32);
+  const catKeys=Object.keys(cats);
+  let i=0;
+  while(currentQuiz.length<32&&i<500){
+    const q=cats[catKeys[i%catKeys.length]].shift();
+    if(q)currentQuiz.push(q);
+    i++;
+  }
   shuffle(currentQuiz);
   currentIdx=0;score=0;answered=false;selectedOption=-1;timeLeft=1800;startTime=Date.now();clearInterval(qTimerInterval);attemptLog=[];
   showScreen('screen-quiz');renderQuestion();startTimer();
@@ -682,19 +877,19 @@ async function finishQuiz(){
     (async()=>{
       let saved=false;
       try{
-        const val=await restJson('/rankings');
+        const val=await restJson('/'+rankNodePath(curQuizId));
         let exists=false;
         if(val)Object.keys(val).forEach(k=>{const v=val[k];if(v&&v.nickname===nickname)exists=true});
         if(exists){
           // 이미 같은 닉네임이 기록되어 있으면 무시 (첫 번째 것만 기록 유지)
           console.log('이미 랭킹에 등록된 닉네임입니다. 첫 기록이 유지됩니다.');
         }else{
-          await db.ref('rankings').push({nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
+          await db.ref(rankNodePath(curQuizId)).push({nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
           saved=true;
         }
       }catch(e){console.warn('랭킹 저장 실패:',e)}
       try{
-        const stRef=db.ref('qstats');
+        const stRef=db.ref(curQuizId==='common'?'qstats':'qstats/'+curQuizId);
         const txs=attemptLog.map(a=>stRef.child(String(a.id)).transaction(s=>{
           s=s||{tries:0,wrong:0};
           s.tries++;
@@ -710,22 +905,23 @@ async function finishQuiz(){
           const a=logMap[q.id];
           if(!a)return Promise.resolve();
           const correctAnswer=q.t==='객관식'?q.o[q.a]:q.a[0];
-          return qlRef.push({nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
+          return qlRef.push({quiz:curQuizId,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
         });
         await Promise.allSettled(writes);
       }catch(e){console.warn('답안 기록 저장 실패:',e)}
-      if(saved)loadRanking('ranking-result-wrap',pct);
+      if(saved)loadRanking('ranking-result-wrap',pct,curQuizId);
     })();
   }
-  setTimeout(()=>loadRanking('ranking-result-wrap',pct),600);
+  setTimeout(()=>loadRanking('ranking-result-wrap',pct,curQuizId),600);
 }
 
-async function loadRanking(containerId,myScore){
+async function loadRanking(containerId,myScore,qid){
+  qid=qid||curQuizId;
   const wrap=document.getElementById(containerId);
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-    const val=await restJson('/rankings');
+    const val=await restJson('/'+rankNodePath(qid));
     let data=[];
     if(val)Object.keys(val).forEach(k=>data.push(val[k]));
     data.sort((a,b)=>(b.score-a.score)||(a.time-b.time));
@@ -738,6 +934,8 @@ async function loadRanking(containerId,myScore){
       const tm=Math.floor(r.time/60),ts=r.time%60;
       html+=`<tr class="${isMe?'my-rank':''}"><td class="rank-medal">${medal}</td><td class="rank-name">${esc(r.nickname)}</td><td class="rank-score">${r.score}점</td><td>${r.correct}/${r.total}</td><td class="rank-time">${tm}분 ${ts}초</td></tr>`;
     });
+    const title=QUIZ_LIST.find(q=>q.id===qid);
+    html=(title?`<div class="rank-title">${esc(title.title)}</div>`:'')+html;
     html+='</tbody></table>';wrap.innerHTML=html;
   }catch(e){wrap.innerHTML='<p style="color:#aaa;padding:20px">랭킹 불러오기 실패</p>'}
 }
@@ -745,14 +943,15 @@ async function loadRanking(containerId,myScore){
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 
 window.playerList=[];
-async function loadPlayers(){
+async function loadPlayers(qid){
+  qid=qid||adminQuiz;
   document.getElementById('anslog-player-detail').classList.add('hidden');
   document.getElementById('anslog-players').classList.remove('hidden');
   const wrap=document.getElementById('anslog-player-list');
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-    const val=await restJson('/rankings');
+    const val=await restJson('/'+rankNodePath(qid));
     let data=[];
     if(val)Object.keys(val).forEach(k=>data.push({key:k,val:val[k]}));
     data.sort((a,b)=>(b.val.score-a.val.score)||(a.val.time-b.val.time));
@@ -775,7 +974,7 @@ async function loadPlayers(){
   }catch(e){wrap.innerHTML='<p style="color:#aaa;padding:20px">플레이어 목록 불러오기 실패</p>'}
 }
 window.showPlayerDetail=async function(i){
-  const nick=playerList[i];
+  const nick=playerList[i],qid=adminQuiz;
   document.getElementById('anslog-players').classList.add('hidden');
   const det=document.getElementById('anslog-player-detail');
   det.classList.remove('hidden');
@@ -784,7 +983,13 @@ window.showPlayerDetail=async function(i){
   try{
     const val=await restJson('/qlog');
     let data=[];
-    if(val)Object.keys(val).forEach(k=>{const v=val[k];if(v&&v.nickname===nick)data.push({key:k,val:v})});
+    if(val)Object.keys(val).forEach(k=>{
+      const v=val[k];
+      if(!v||v.nickname!==nick)return;
+      const vq=v.quiz||'common';
+      if(vq!==qid)return;
+      data.push({key:k,val:v});
+    });
     data.sort((a,b)=>a.val.date-b.val.date);
     if(data.length===0){
       det.innerHTML=`<div class="detail-back"><div><h3>${esc(nick)}</h3></div><button class="btn btn-secondary" onclick="loadPlayers()">뒤로</button></div><p style="color:#aaa;padding:20px">답안 기록이 없습니다</p>`;
@@ -835,34 +1040,29 @@ window.renderAttemptView=function(idx){
   det.innerHTML=html;
 };
 
+let adminTab='stats';
 window.showAnalysis=function(){
-  showScreen('screen-analysis');
-  const m=document.getElementById('admin-modal');
-  m.classList.remove('hidden');
-  document.getElementById('admin-pw').value='';
-  setTimeout(()=>document.getElementById('admin-pw').focus(),60);
-};
-window.adminLogin=function(){
-  const pw=document.getElementById('admin-pw').value;
-  if(pw!==ADMIN_PW){shake('admin-modal');document.getElementById('admin-pw').value='';return}
-  document.getElementById('admin-modal').classList.add('hidden');
+  if(!authUser){alert('관리자 계정으로 로그인하세요.');return}
+  if(!isAdmin){alert('관리자 계정이 아닙니다.');return}
   document.getElementById('analysis-content').classList.remove('hidden');
-  loadAnalysis();
+  showScreen('screen-analysis');
+  initAdminQuizUI();
   showAnalysisTab('stats');
-  loadPlayers();
 };
-window.adminCancel=function(){document.getElementById('admin-modal').classList.add('hidden');showScreen('screen-start')};
-function shake(id){
-  const el=document.getElementById(id).firstElementChild;
-  el.classList.add('shake');
-  setTimeout(()=>el.classList.remove('shake'),500);
+function initAdminQuizUI(){
+  const sel=document.getElementById('admin-qsel');
+  sel.innerHTML=QUIZ_LIST.map(q=>`<option value="${q.id}">${esc(q.title)}</option>`).join('');
+  sel.value=adminQuiz;
 }
+window.adminQuizChanged=function(){
+  adminQuiz=document.getElementById('admin-qsel').value;
+  showAnalysisTab(adminTab);
+};
 document.addEventListener('keydown',function(e){
-  if(e.key==='Enter'&&!document.getElementById('admin-modal').classList.contains('hidden')){
-    adminLogin();
-  }
+  if(e.key==='Enter'&&!document.getElementById('email-modal').classList.contains('hidden'))emailLogin();
 });
 window.showAnalysisTab=function(t){
+  adminTab=t;
   document.getElementById('tab-stats').classList.toggle('tab-active',t==='stats');
   document.getElementById('tab-log').classList.toggle('tab-active',t==='log');
   document.getElementById('tab-quest').classList.toggle('tab-active',t==='quest');
@@ -870,6 +1070,7 @@ window.showAnalysisTab=function(t){
   document.getElementById('analysis-wrap').classList.toggle('hidden',t!=='stats');
   document.getElementById('answerlog-wrap').classList.toggle('hidden',t!=='log');
   document.getElementById('quest-wrap').classList.toggle('hidden',t!=='quest');
+  if(t==='stats')setTimeout(()=>loadAnalysis(),0);
   if(t==='quest')renderQuestList();
   if(t==='log')loadPlayers();
 };
@@ -878,11 +1079,11 @@ async function loadAnalysis(){
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-    await ensureQuest();
-    const val=await restJson('/qstats');
+    await ensureQuest(adminQuiz);
+    const val=await restJson(adminQuiz==='common'?'/qstats':'/qstats/'+adminQuiz);
     const stats={};
     if(val)Object.keys(val).forEach(k=>{stats[k]=val[k]});
-    analysisStats=getQuestionPool().map(q=>{
+    analysisStats=getQuestionPool(adminQuiz).map(q=>{
       const s=stats[q.id]||{tries:0,wrong:0};
       return {q:q,tries:s.tries||0,wrong:s.wrong||0};
     });
@@ -924,15 +1125,18 @@ window.renderAnalysis=function(){
   });
   wrap.innerHTML=html;
 }
+function questRef(qid){
+  return qid==='common'?'quest':'quest/'+qid;
+}
 window.renderQuestList=async function(){
-  await ensureQuest();
+  await ensureQuest(adminQuiz);
   const list=document.getElementById('quest-list');
   const search=(document.getElementById('quest-search').value||'').trim();
-  const map=questData||{};
+  const map=questCache[adminQuiz]||{};
   let items=[];
-  allQuestions.forEach((d,i)=>{
+  baseQuestions(adminQuiz).forEach((d,i)=>{
     const ov=map[String(i)]||{};
-    items.push({q:{...d,...ov,id:Number(i)},hidden:!!ov.remove,custom:false});
+    items.push({q:{...d,...ov,id:String(i)},hidden:!!ov.remove,custom:false});
   });
   Object.keys(map).forEach(k=>{
     const v=map[k];
@@ -961,16 +1165,19 @@ window.renderQuestList=async function(){
   });
   list.innerHTML=html;
 };
-window.openQuestForm=function(key){
+window.openQuestForm=async function(key){
+  await ensureQuest(adminQuiz);
+  const map=questCache[adminQuiz]||{};
   document.getElementById('quest-list-view').classList.add('hidden');
   const form=document.getElementById('quest-form');
   form.classList.remove('hidden');
+  const base=baseQuestions(adminQuiz);
   const reset=()=>{
     document.getElementById('qf-key').value='';
     document.getElementById('qf-title').textContent='새 문제 추가';
     document.getElementById('qf-q').value='';
-    document.getElementById('qf-cat').value='역사';
-    document.getElementById('qf-type').value='주관식';
+    document.getElementById('qf-cat').value=base[0]?base[0].cat:'상식';
+    document.getElementById('qf-type').value=base[0]&&base[0].t==='객관식'?'객관식':'주관식';
     document.getElementById('qf-o1').value='';document.getElementById('qf-o2').value='';
     document.getElementById('qf-o3').value='';document.getElementById('qf-o4').value='';
     document.getElementById('qf-a').value='0';
@@ -979,9 +1186,8 @@ window.openQuestForm=function(key){
     toggleQuestType();
   };
   if(key){
-    const map=questData||{};
     let q=null;
-    if(/^\d+$/.test(String(key))){const d=allQuestions[Number(key)];if(d)q={...d,...(map[String(key)]||{})}}
+    if(/^\d+$/.test(String(key))){const d=base[Number(key)];if(d)q={...d,...(map[String(key)]||{})}}
     else if(map[String(key)])q=map[String(key)];
     if(q){
       document.getElementById('qf-key').value=String(key);
@@ -1030,30 +1236,33 @@ window.saveQuest=async function(){
     obj={q,cat,t:'주관식',a:ans.split(',').map(s=>s.trim()).filter(Boolean),e,custom:!isDefault};
   }
   try{
-    const dest=key||(await db.ref('quest').push()).key;
-    await db.ref('quest').child(dest).set(obj);
-    questData=null;
-    await ensureQuest();
+    const qf=questRef(adminQuiz);
+    const dest=key||(await db.ref(qf).push()).key;
+    await db.ref(qf).child(dest).set(obj);
+    questCache[adminQuiz]=null;
+    await ensureQuest(adminQuiz);
     closeQuestForm();
     renderQuestList();
   }catch(err){alert('저장 실패: '+err.message)}
 };
 window.toggleQuestHide=async function(key){
   try{
-    const isHiddenNow=!!questData[String(key)]&&questData[String(key)].remove;
-    if(isHiddenNow){await db.ref('quest').child(String(key)).set(null)}
-    else{await db.ref('quest').child(String(key)).set({remove:true})}
-    questData=null;
-    await ensureQuest();
+    const qf=questRef(adminQuiz);
+    const map=questCache[adminQuiz]||{};
+    const isHiddenNow=!!map[String(key)]&&map[String(key)].remove;
+    if(isHiddenNow)await db.ref(qf).child(String(key)).set(null);
+    else await db.ref(qf).child(String(key)).set({remove:true});
+    questCache[adminQuiz]=null;
+    await ensureQuest(adminQuiz);
     renderQuestList();
   }catch(err){alert('실패: '+err.message)}
 };
 window.deleteQuest=async function(key){
   if(!confirm('이 문제를 삭제할까요? (통계는 남아있습니다)'))return;
   try{
-    await db.ref('quest').child(String(key)).set(null);
-    questData=null;
-    await ensureQuest();
+    await db.ref(questRef(adminQuiz)).child(String(key)).set(null);
+    questCache[adminQuiz]=null;
+    await ensureQuest(adminQuiz);
     renderQuestList();
   }catch(err){alert('삭제 실패: '+err.message)}
 };
