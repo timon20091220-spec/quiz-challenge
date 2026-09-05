@@ -26,6 +26,8 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .btn-secondary:hover{border-color:#ffd200;color:#ffd200}
 .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .quiz-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px}
+.home-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);color:#fff;border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;font-size:1.15em;cursor:pointer;transition:background .2s,border-color .2s,transform .2s;margin-left:auto}
+.home-btn:hover{background:rgba(255,210,0,.15);border-color:#ffd200;transform:scale(1.06)}
 .timer{font-size:1.4em;font-weight:700;color:#ffd200;font-variant-numeric:tabular-nums}
 .timer.danger{color:#f44336;animation:pulse 1s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
@@ -311,8 +313,9 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
     <div class="quiz-header">
       <span id="q-counter" class="q-num"></span>
       <span id="q-category-badge"></span>
-      <span id="q-timer" class="timer" style="font-size:1.1em;margin-right:10px">30</span>
+<span id="q-timer" class="timer" style="font-size:1.1em;margin-right:10px">30</span>
       <span id="timer" class="timer">30:00</span>
+      <button class="home-btn" onclick="leaveQuiz()" aria-label="홈으로" title="홈으로">🏠</button>
     </div>
     <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
     <div class="question-card">
@@ -1062,6 +1065,11 @@ try{await fsSet('accounts',u.uid,{registered:true},{merge:true})}catch(e){consol
 };
 window.logout=function(){firebase.auth().signOut()};
 window.goStart=function(){showScreen('screen-start')};
+window.leaveQuiz=function(){
+  if(!confirm('퀴즈를 중단하고 홈 화면으로 갈까요?\n진행 기록은 저장되지 않아요.'))return;
+  clearInterval(timerInterval);clearInterval(qTimerInterval);
+  goStart();
+};
 window.showScreen=function(id){document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));document.getElementById(id).classList.remove('hidden')};
 window.showRankTab=function(qid){
   ['common','ajaeggae','history'].forEach(id=>{
