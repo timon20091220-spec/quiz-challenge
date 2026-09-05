@@ -1246,7 +1246,8 @@ function startQTimer(){
 function handleTimeout(){
   if(answered)return;
   const q=currentQuiz[currentIdx],isObj=q.t==='객관식';
-  answered=true;q.userWrong=true;score=score;attemptLog.push({id:q.id,wrong:true,t:q.q,c:q.cat});
+answered=true;q.userWrong=true;score=score;attemptLog.push({id:q.id,wrong:true,t:q.q,c:q.cat});
+  sfx('wrong');
   document.getElementById('answer-result').textContent='시간초과!';
   document.getElementById('answer-result').className='answer-result is-wrong';
   if(!isObj){const input=document.getElementById('answer-input');input.disabled=true}
@@ -1310,14 +1311,16 @@ window.submitAnswer=function(){
       btns[selectedOption].classList.add('correct');
       document.getElementById('answer-result').textContent='정답!';
       document.getElementById('answer-result').className='answer-result is-correct';
-      score++;
+score++;
       logAttempt(false,userOpt);
+      sfx('correct');
     }else{
       btns[selectedOption].classList.add('wrong');
       btns[q.a].classList.add('correct');
       document.getElementById('answer-result').textContent='오답!';
       document.getElementById('answer-result').className='answer-result is-wrong';
       q.userWrong=true;logAttempt(true,userOpt);
+      sfx('wrong');
     }
   }else{
     const input=document.getElementById('answer-input'),userAns=input.value.trim();
@@ -1327,12 +1330,14 @@ window.submitAnswer=function(){
       input.classList.add('correct');
       document.getElementById('answer-result').textContent='정답!';
       document.getElementById('answer-result').className='answer-result is-correct';
-      score++;logAttempt(false,userAns);
+score++;logAttempt(false,userAns);
+      sfx('correct');
     }else{
       input.classList.add('wrong');
       document.getElementById('answer-result').textContent='오답!';
       document.getElementById('answer-result').className='answer-result is-wrong';
       q.userWrong=true;logAttempt(true,userAns);
+      sfx('wrong');
     }
     input.disabled=true;
   }
@@ -1440,6 +1445,27 @@ let html='<table class="ranking-table"><thead><tr><th>#</th><th>닉네임</th><t
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 
 window.playerList=[];
+let sndCtx=null;
+function sfxTone(ctx,freq,dura,delay,type,gain){
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type=type||'sine';o.frequency.value=freq;
+  g.gain.setValueAtTime(0.0001,ctx.currentTime+delay);
+  g.gain.exponentialRampToValueAtTime(gain||0.22,ctx.currentTime+delay+0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+delay+dura);
+  o.connect(g);g.connect(ctx.destination);
+  o.start(ctx.currentTime+delay);o.stop(ctx.currentTime+delay+dura+0.05);
+}
+function sfx(type){
+  try{
+    if(!sndCtx)sndCtx=new (window.AudioContext||window.webkitAudioContext)();
+    if(sndCtx.state==='suspended')sndCtx.resume();
+    if(type==='correct'){
+      [[523.25,0],[659.25,0.11],[783.99,0.22]].forEach(([f,dt])=>sfxTone(sndCtx,f,0.16,dt,'triangle',0.2));
+    }else{
+      [[233.08,0],[174.61,0.16]].forEach(([f,dt])=>sfxTone(sndCtx,f,0.24,dt,'sawtooth',0.14));
+    }
+  }catch(e){}
+}
 async function loadPlayers(qid){
   qid=qid||adminQuiz;
   document.getElementById('anslog-player-detail').classList.add('hidden');
