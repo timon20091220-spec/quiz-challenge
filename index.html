@@ -511,7 +511,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-const APP_VER='v12';
+const APP_VER='v13';
 (function(){try{var m=(location.search||'').match(/[?&]v=([^&]*)/);if(!m||decodeURIComponent(m[1])!==APP_VER)location.replace(location.pathname+'?v='+APP_VER)}catch(e){}})();
 window.__dbgErrs=[];
 function showDbg(msg){
@@ -1298,6 +1298,24 @@ function startTimer(){
   },1000);
 }
 
+function chosungHint(str){
+  const CHO=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+  let out='';
+  for(const ch of String(str||'')){
+    const c=ch.charCodeAt(0);
+    if(c>=0xAC00&&c<=0xD7A3)out+=CHO[Math.floor((c-0xAC00)/588)];
+    else if(ch===' ')out+=' ';
+    else out+='·';
+  }
+  return out;
+}
+function qHintSource(q){
+  if(!q||q.t==='객관식')return '';
+  const arr=Array.isArray(q.a)?q.a:(q.a?[q.a]:[]);
+  if(!arr.length)return '';
+  const kor=arr.find(a=>/[\uAC00-\uD7A3]/.test(String(a)));
+  return String(kor||arr[0]);
+}
 function startQTimer(){
   clearInterval(qTimerInterval);
   const qel=document.getElementById('q-timer');
@@ -1307,6 +1325,15 @@ function startQTimer(){
     qt--;
     qel.textContent=qt;
     if(qt<=5)qel.classList.add('danger');
+    if(qt===10){
+      try{
+        const q=currentQuiz[currentIdx],input=document.getElementById('answer-input');
+        if(q&&q.t!=='객관식'&&input&&!answered){
+          const hint=chosungHint(qHintSource(q));
+          if(hint)input.placeholder='힌트: '+hint;
+        }
+      }catch(e){}
+    }
     if(qt<=0){clearInterval(qTimerInterval);qel.textContent='0';handleTimeout()}
   },1000);
 }
@@ -1353,7 +1380,7 @@ let badge='';
     });
   }else{
     opts.classList.add('hidden');input.classList.remove('hidden');
-    input.value='';input.className='answer-input';input.disabled=false;input.focus();
+    input.value='';input.className='answer-input';input.disabled=false;input.placeholder='정답을 입력하세요';input.focus();
   }
   document.getElementById('answer-result').textContent='';
   document.getElementById('answer-result').className='answer-result';
