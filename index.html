@@ -91,6 +91,19 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .analysis-stat .as-sub{font-size:.75em;color:#aaa}
 .analysis-bar{height:6px;background:#333;border-radius:3px;margin-top:6px;overflow:hidden}
 .analysis-bar>div{height:100%;background:linear-gradient(90deg,#f44336,#ff9800);border-radius:3px}
+.tab-btn{padding:10px 22px;border:none;border-radius:10px;font-size:.95em;font-weight:700;cursor:pointer;background:#333;color:#aaa;transition:all .2s}
+.tab-btn.tab-active{background:linear-gradient(90deg,#f7971e,#ffd200);color:#1a1a2e}
+.tab-btn:not(.tab-active):hover{color:#fff}
+.ans-item{display:grid;grid-template-columns:26px 1fr auto;gap:8px;padding:12px 6px;border-bottom:1px solid rgba(255,255,255,.07);font-size:.9em;align-items:center}
+.ans-item:last-child{border-bottom:none}
+.ans-result{display:inline-block;min-width:44px;text-align:center;padding:3px 8px;border-radius:8px;font-size:.78em;font-weight:700}
+.ans-result.y{background:rgba(76,175,80,.18);color:#4caf50}
+.ans-result.n{background:rgba(244,67,54,.18);color:#f44336}
+.ans-meta{font-size:.8em;color:#aaa;margin-top:2px}
+.ans-q{font-weight:600;margin-bottom:2px}
+.ans-got{color:#4caf50;font-weight:600}
+.ans-got.wrong{color:#f44336}
+.ans-user{color:#ffd200}
 .chk{width:42px;height:26px;display:inline-flex;align-items:center;cursor:pointer}
 @media(max-width:500px){.logo{font-size:2em}.question-text{font-size:1.05em}.score-details{grid-template-columns:1fr}.quiz-header{flex-direction:column;align-items:flex-start}.option-grid{grid-template-columns:1fr}}
 </style>
@@ -164,9 +177,13 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
   </div>
   <div id="screen-analysis" class="screen hidden">
     <div class="ranking-card">
-      <h2 style="margin-bottom:5px">문항 오답률 분석</h2>
-      <p style="color:#aaa;margin-bottom:15px;font-size:.9em">누적된 시도 기준 문제별 오답 통계</p>
-      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:15px;justify-content:center;align-items:center">
+      <h2 style="margin-bottom:5px">관리자 전용</h2>
+      <p style="color:#aaa;margin-bottom:15px;font-size:.9em">문항 오답률 · 답안 기록 분석</p>
+      <div style="display:flex;justify-content:center;gap:10px;margin-bottom:20px">
+        <button id="tab-stats" class="tab-btn tab-active" onclick="showAnalysisTab('stats')">오답률 분석</button>
+        <button id="tab-log" class="tab-btn" onclick="showAnalysisTab('log')">답안 기록</button>
+      </div>
+      <div id="analysis-controls" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:15px;justify-content:center;align-items:center">
         <select id="analysis-sort" class="analysis-select" onchange="renderAnalysis()">
           <option value="rate">오답률 높은 순</option>
           <option value="tries">시도 많은 순</option>
@@ -181,6 +198,13 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
         </label>
       </div>
       <div id="analysis-wrap"><div class="loading"><div class="spinner"></div></div></div>
+      <div id="answerlog-wrap" class="hidden" style="text-align:left">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:15px;flex-wrap:wrap">
+          <span style="color:#aaa;font-size:.9em">최근 100건 · <span id="anslog-count"></span></span>
+          <button class="btn btn-secondary" style="padding:8px 16px;font-size:.85em;margin:0" onclick="clearAnswerLog()">기록 비우기</button>
+        </div>
+        <div id="answerlog-list"></div>
+      </div>
     </div>
     <div style="text-align:center;margin-top:15px">
       <button class="btn btn-secondary" onclick="goStart()">돌아가기</button>
@@ -192,6 +216,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
 const firebaseConfig={apiKey:"AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k",authDomain:"quiz-ranking-6cb9f.firebaseapp.com",databaseURL:"https://quiz-ranking-6cb9f-default-rtdb.firebaseio.com",projectId:"quiz-ranking-6cb9f",storageBucket:"quiz-ranking-6cb9f.firebasestorage.app",messagingSenderId:"488270918333",appId:"1:488270918333:web:93f4612335b58780b43dd4"};
+const ADMIN_PW='triuytje123!';
 let db,firebaseReady=false;try{firebase.initializeApp(firebaseConfig);db=firebase.database();firebaseReady=true}catch(e){console.warn("파이어베이스 연결 실패:",e)}
 
 function normalize(s){
@@ -443,10 +468,11 @@ window.submitAnswer=function(){
   if(answered)return;
   clearInterval(qTimerInterval);
   const q=currentQuiz[currentIdx],isObj=q.t==='객관식';
-  const logAttempt=wrong=>attemptLog.push({id:q.id,wrong});
+  const logAttempt=(wrong,ans)=>attemptLog.push({id:q.id,wrong,ans:ans||''});
   if(isObj){
     if(selectedOption===-1){alert('보기를 선택해주세요.');return}
     answered=true;
+    const userOpt=q.o[selectedOption];
     const btns=document.getElementById('options-container').querySelectorAll('.option-btn');
     btns.forEach(b=>{b.style.pointerEvents='none'});
     if(selectedOption===q.a){
@@ -454,13 +480,13 @@ window.submitAnswer=function(){
       document.getElementById('answer-result').textContent='정답!';
       document.getElementById('answer-result').className='answer-result is-correct';
       score++;
-      logAttempt(false);
+      logAttempt(false,userOpt);
     }else{
       btns[selectedOption].classList.add('wrong');
       btns[q.a].classList.add('correct');
       document.getElementById('answer-result').textContent='오답!';
       document.getElementById('answer-result').className='answer-result is-wrong';
-      q.userWrong=true;logAttempt(true);
+      q.userWrong=true;logAttempt(true,userOpt);
     }
   }else{
     const input=document.getElementById('answer-input'),userAns=input.value.trim();
@@ -470,12 +496,12 @@ window.submitAnswer=function(){
       input.classList.add('correct');
       document.getElementById('answer-result').textContent='정답!';
       document.getElementById('answer-result').className='answer-result is-correct';
-      score++;logAttempt(false);
+      score++;logAttempt(false,userAns);
     }else{
       input.classList.add('wrong');
       document.getElementById('answer-result').textContent='오답!';
       document.getElementById('answer-result').className='answer-result is-wrong';
-      q.userWrong=true;logAttempt(true);
+      q.userWrong=true;logAttempt(true,userAns);
     }
     input.disabled=true;
   }
@@ -534,6 +560,16 @@ async function finishQuiz(){
         });
       }
     }catch(e){console.warn('문항 통계 저장 실패:',e)}
+    try{
+      const logMap={};attemptLog.forEach(a=>logMap[a.id]=a);
+      const qlRef=db.ref('qlog'),now=Date.now();
+      for(const q of currentQuiz){
+        const a=logMap[q.id];
+        if(!a)continue;
+        const correctAnswer=q.t==='객관식'?q.o[q.a]:q.a[0];
+        await qlRef.push({nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
+      }
+    }catch(e){console.warn('답안 기록 저장 실패:',e)}
   }
   setTimeout(()=>loadRanking('ranking-result-wrap',pct),500);
 }
@@ -559,9 +595,53 @@ async function loadRanking(containerId,myScore){
 
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
 
+async function loadAnswerLog(){
+  const list=document.getElementById('answerlog-list');
+  const count=document.getElementById('anslog-count');
+  list.innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  count.textContent='';
+  if(!firebaseReady){list.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
+  try{
+    const snap=await db.ref('qlog').orderByChild('date').limitToLast(100).once('value');
+    let data=[];snap.forEach(c=>{data.push(c.val())});data.reverse();
+    count.textContent=data.length+'건';
+    if(data.length===0){list.innerHTML='<p style="color:#aaa;padding:20px">아직 기록이 없습니다</p>';return}
+    let html='';
+    data.forEach(r=>{
+      const t=new Date(r.date);
+      const tm=`${String(t.getMonth()+1).padStart(2,'0')}.${String(t.getDate()).padStart(2,'0')} ${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+      const got=r.correct?`<span class="ans-got">${esc(r.userAns)}</span>`:`<span class="ans-got wrong">${esc(r.userAns||'(무응답)')} <span style="color:#aaa;font-size:.85em">→ ${esc(r.correctAnswer)}</span></span>`;
+      html+=`<div class="ans-item">
+        <div><span class="ans-result ${r.correct?'y':'n'}">${r.correct?'O':'X'}</span></div>
+        <div>
+          <div class="ans-q">${esc(r.q)}</div>
+          <div class="ans-meta">${esc(r.nickname)} · ${esc(r.cat)} · ${tm}</div>
+        </div>
+        <div class="ans-user">${got}</div>
+      </div>`;
+    });
+    list.innerHTML=html;
+  }catch(e){list.innerHTML='<p style="color:#aaa;padding:20px">답안 기록 불러오기 실패</p>'}
+}
+window.clearAnswerLog=async function(){
+  if(!confirm('전체 답안 기록을 삭제할까요?'))return;
+  try{await db.ref('qlog').set(null);loadAnswerLog()}catch(e){alert('삭제 실패')}
+}
+
 window.showAnalysis=function(){
+  const pw=prompt('관리자 비밀번호를 입력하세요');
+  if(pw!==ADMIN_PW){alert('비밀번호가 틀렸습니다.');return}
   showScreen('screen-analysis');
   loadAnalysis();
+  showAnalysisTab('stats');
+  loadAnswerLog();
+};
+window.showAnalysisTab=function(t){
+  document.getElementById('tab-stats').classList.toggle('tab-active',t==='stats');
+  document.getElementById('tab-log').classList.toggle('tab-active',t==='log');
+  document.getElementById('analysis-controls').classList.toggle('hidden',t!=='stats');
+  document.getElementById('analysis-wrap').classList.toggle('hidden',t!=='stats');
+  document.getElementById('answerlog-wrap').classList.toggle('hidden',t!=='log');
 };
 async function loadAnalysis(){
   const wrap=document.getElementById('analysis-wrap');
