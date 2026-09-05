@@ -8,8 +8,8 @@
 <title>퀴즈 챌린지</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);min-height:100vh;color:#fff;display:flex;justify-content:center;align-items:center}
-.container{width:100%;max-width:700px;padding:20px}
+body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);min-height:100vh;color:#fff;display:flex;justify-content:center;align-items:flex-start}
+.container{width:100%;max-width:700px;padding:20px;margin:auto}
 .hidden{display:none!important}
 .screen{text-align:center;animation:fadeIn .4s}
 @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
@@ -509,7 +509,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-const APP_VER='v9';
+const APP_VER='v10';
 (function(){try{var m=(location.search||'').match(/[?&]v=([^&]*)/);if(!m||decodeURIComponent(m[1])!==APP_VER)location.replace(location.pathname+'?v='+APP_VER)}catch(e){}})();
 window.__dbgErrs=[];
 function showDbg(msg){
