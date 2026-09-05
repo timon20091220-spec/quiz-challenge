@@ -36,9 +36,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .cat-history{background:#e91e63;color:#fff}
 .cat-science{background:#4caf50;color:#fff}
 .cat-fun{background:#ff9800;color:#fff}
-.diff-hard{background:linear-gradient(135deg,#ff5252,#d32f2f);color:#fff}
-.diff-mid{background:linear-gradient(135deg,#f7971e,#ffd200);color:#2d2a10}
-.diff-easy{background:linear-gradient(135deg,#43a047,#81c784);color:#fff}
+.cat-common{background:#7c4dff;color:#fff}
 .question-card{background:rgba(255,255,255,.07);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:30px;margin-bottom:20px}
 .question-text{font-size:1.2em;line-height:1.6;font-weight:600}
 .answer-input{width:100%;padding:16px 20px;border:2px solid #444;border-radius:12px;background:rgba(255,255,255,.05);color:#fff;font-size:1.1em;outline:none;transition:border .2s;text-align:center;margin-top:15px}
@@ -1215,11 +1213,9 @@ function renderQuestion(){
   document.getElementById('progress-fill').style.width=`${(currentIdx/total)*100}%`;
   startQTimer();
 let badge='';
-  if(q.diff==='상')badge='<span class="q-category diff-hard">난이도 상</span>';
-  else if(q.diff==='중')badge='<span class="q-category diff-mid">난이도 중</span>';
-  else if(q.diff==='하')badge='<span class="q-category diff-easy">난이도 하</span>';
-  else if(q.cat==='역사')badge='<span class="q-category cat-history">역사</span>';
+  if(q.cat==='역사')badge='<span class="q-category cat-history">역사</span>';
   else if(q.cat==='과학')badge='<span class="q-category cat-science">과학</span>';
+  else if(q.cat)badge='<span class="q-category cat-common">'+esc(q.cat)+'</span>';
   else badge='<span class="q-category cat-fun">재밌는</span>';
   document.getElementById('q-category-badge').innerHTML=badge;
   document.getElementById('question-text').textContent=q.q;
@@ -1598,11 +1594,8 @@ window.renderAnalysis=function(){
   let html='';
   rows.forEach(r=>{
 const q=r.data.q,st=r.data,rte=rate(st);
-    let catCls,catLabel;
-    if(q.diff==='상'){catCls='diff-hard';catLabel='난이도 상'}
-    else if(q.diff==='중'){catCls='diff-mid';catLabel='난이도 중'}
-    else if(q.diff==='하'){catCls='diff-easy';catLabel='난이도 하'}
-    else{catCls=q.cat==='역사'?'cat-history':q.cat==='과학'?'cat-science':'cat-fun';catLabel=q.cat}
+    const catCls=q.cat==='역사'?'cat-history':q.cat==='과학'?'cat-science':q.cat?'cat-common':'cat-fun';
+    const catLabel=String(q.cat||'');
     const bar=st.tries>0?Math.round((st.wrong/st.tries)*100):0;
     const ans=q.t==='객관식'?q.o[q.a]:q.a[0];
     html+=`<div class="analysis-item">
@@ -1643,11 +1636,8 @@ window.renderQuestList=async function(){
   let html='';
   filtered.forEach(r=>{
 const q=r.q,isHidden=r.hidden,isCustom=r.custom;
-    let catCls,catLabel;
-    if(q.diff==='상'){catCls='diff-hard';catLabel='난이도 상'}
-    else if(q.diff==='중'){catCls='diff-mid';catLabel='난이도 중'}
-    else if(q.diff==='하'){catCls='diff-easy';catLabel='난이도 하'}
-    else{catCls=q.cat==='역사'?'cat-history':q.cat==='과학'?'cat-science':'cat-fun';catLabel=q.cat}
+    const catCls=q.cat==='역사'?'cat-history':q.cat==='과학'?'cat-science':q.cat?'cat-common':'cat-fun';
+    const catLabel=String(q.cat||'');
     const typeTxt=q.t==='객관식'?'객관식':'주관식';
     const ans=q.t==='객관식'?q.o[q.a]:q.a.join(', ');
     html+=`<div class="quest-item ${isHidden?'hidden_q':''}">
