@@ -896,6 +896,7 @@ function init(){
               setTimeout(()=>{gateAlerted=false},1200);
             }
             stopSessionWatch();
+            try{await user.delete()}catch(e){console.warn('미가입 계정 삭제 실패:',e)}
             try{await firebase.auth().signOut()}catch(e){}
             updateStartUI();
             routeAfterAuth();
