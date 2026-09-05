@@ -120,6 +120,12 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .quiz-menu-item:hover{border-color:rgba(255,210,0,.5);background:rgba(255,210,0,.06)}
 .qq-arrow{color:#ffd200;font-size:1.2em}
 .rec-hd{text-align:center;margin-bottom:12px;font-size:.95em}
+.rec-cat-btn{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:14px 16px;width:min(92%,430px);cursor:pointer;transition:border .2s,background .2s}
+.rec-cat-btn:hover{border-color:#ffd200;background:rgba(255,210,0,.08)}
+.rec-back{background:none;border:0;color:#aaa;font-size:.9em;cursor:pointer;padding:4px 8px;margin-bottom:4px}
+.rec-back:hover{color:#ffd200}
+.btn-primary-outline{background:none;border:2px solid #ffd200;color:#ffd200;border-radius:12px;font-weight:700;cursor:pointer;transition:all .2s}
+.btn-primary-outline:hover{background:#ffd200;color:#0f0c29}
 .rank-title{font-weight:800;font-size:1.15em;color:#ffd200;margin:8px 0 16px;text-align:center}
 .analysis-select{background:#0f0c29;color:#fff;border:2px solid #444;border-radius:10px;padding:10px 14px;font-size:1em;outline:none;cursor:pointer}
 .analysis-select:focus{border-color:#ffd200}
@@ -169,29 +175,36 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
       <button class="btn btn-primary" style="margin:6px 4px" onclick="googleLogin()">Google로 로그인</button>
       <button class="btn btn-secondary" style="margin:6px 4px" onclick="openEmailLogin()">이메일 로그인</button>
     </div>
-    <div id="auth-post" class="hidden" style="margin-top:14px">
-      <p style="color:#aaa;font-size:.9em;margin-bottom:8px;word-break:break-all"><span id="auth-email"></span> <span id="auth-badge"></span></p>
-      <button class="btn btn-secondary" style="padding:8px 16px;font-size:.85em" onclick="logout()">로그아웃</button>
-    </div>
     <div id="quiz-menu" class="hidden" style="margin-top:18px">
       <div id="nick-wrap" class="hidden" style="margin-bottom:20px">
-        <p style="color:#aaa;font-size:.9em;margin-bottom:6px">나의 닉네임</p>
+        <p style="color:#aaa;font-size:.9em;margin-bottom:6px">나의 닉네임 <span style="font-size:.8em;color:#666">(변경 불가)</span></p>
         <div style="display:flex;align-items:center;justify-content:center;gap:10px">
           <span id="nick-display" style="font-weight:800;font-size:1.3em;color:#ffd200"></span>
-          <button class="btn btn-secondary" style="padding:6px 12px;font-size:.8em" onclick="openNicknameSetup()">변경</button>
         </div>
       </div>
       <div id="quiz-btns" style="display:flex;flex-direction:column;align-items:center;gap:10px"></div>
       <div style="display:flex;justify-content:center;gap:10px;margin-top:18px;flex-wrap:wrap">
-        <button class="btn btn-secondary" style="margin:0;padding:10px 18px;font-size:.9em" onclick="showMyRecords()">내 기록</button>
+        <button class="btn btn-primary-outline" style="margin:0;padding:10px 22px;font-size:.9em" onclick="openMyMenu()">MY</button>
         <button class="btn btn-secondary" style="margin:0;padding:10px 18px;font-size:.9em" onclick="showRankingOnly()">랭킹 보기</button>
         <button id="admin-btn" class="btn btn-secondary hidden" style="margin:0;padding:10px 18px;font-size:.9em" onclick="showAnalysis()">관리자 · 문항 분석</button>
       </div>
     </div>
   </div>
+  <div id="screen-mymenu" class="screen hidden">
+    <div class="logo" style="font-size:2em">MY</div>
+    <div class="ranking-card" style="text-align:left;width:min(92%,360px)">
+      <div style="padding:6px 0;word-break:break-all"><span style="color:#aaa">계정</span><br><b id="my-email" style="word-break:break-all"></b><span id="my-badge"></span></div>
+      <div style="padding:6px 0"><span style="color:#aaa">닉네임</span><br><b id="my-nickname" style="color:#ffd200"></b></div>
+    </div>
+    <div style="margin-top:18px;display:flex;flex-direction:column;align-items:center;gap:10px">
+      <button class="btn btn-primary" style="width:min(92%,300px)" onclick="showMyRecords()">내 기록 보기</button>
+      <button class="btn btn-secondary" style="width:min(92%,300px)" onclick="logout()">로그아웃</button>
+      <button class="btn btn-secondary" style="width:min(92%,300px)" onclick="goStart()">로비로</button>
+    </div>
+  </div>
   <div id="screen-nickname" class="screen hidden">
     <div class="logo" style="font-size:2.2em">닉네임 설정</div>
-    <p style="color:#aaa;margin:10px 0 16px;line-height:1.6">이 계정에서 사용할 닉네임을 정해주세요.<br>랭킹·기록에 이 이름으로 표시되며,<br>다른 기기에서 로그인해도 유지됩니다.</p>
+    <p style="color:#aaa;margin:10px 0 16px;line-height:1.6">이 계정에서 사용할 닉네임을 정해주세요.<br>닉네임은 정한 뒤 <b style="color:#fff">변경할 수 없고</b>,<br>다른 사람과 겹칠 수 없습니다.</p>
     <div class="input-group" style="text-align:center;width:min(92%,360px)">
       <input type="text" id="nickname-set" placeholder="닉네임 (최대 20자)" maxlength="20" autocomplete="off" onkeydown="if(event.key==='Enter')confirmNickname()">
     </div>
@@ -675,44 +688,66 @@ function getQuestionPool(qid){
   return out;
 }
 
-let uid='';
+let uid='',mySid='',sessionTimer=null;
 async function getAccountNick(u){
   if(!u)return '';
   try{const v=await restJson('/usernames/'+encodeURIComponent(u));return (v&&v.nickname)?v.nickname:''}catch(e){return ''}
+}
+async function nicknameTaken(nick,curUid){
+  try{
+    const all=await restJson('/usernames');
+    if(!all)return false;
+    return Object.keys(all).some(k=>k!==curUid&&all[k]&&all[k].nickname===nick);
+  }catch(e){return false}
 }
 function applyNicknameUI(){
   document.getElementById('nick-display').textContent=nickname||'';
   const t=document.getElementById('records-title');
   if(t&&nickname)t.textContent=nickname+' 님의 기록';
-  if(document.getElementById('records-sub'))document.getElementById('records-sub').textContent=nickname?(nickname+' 님의 플레이 기록 · 시도 횟수대로 1차, 2차... 순서로 표시됩니다'):'';
 }
-window.openNicknameSetup=function(){
-  document.getElementById('nickname-set').value=nickname||'';
-  showScreen('screen-nickname');
-  setTimeout(()=>{const i=document.getElementById('nickname-set');i.focus();i.select()},50);
-};
+function openMyMenu(){
+  document.getElementById('my-email').textContent=authUser?(authUser.email||'(구글 계정)'):'-';
+  document.getElementById('my-badge').textContent=isAdmin?' · 관리자':'';
+  document.getElementById('my-nickname').textContent=nickname||'-';
+  showScreen('screen-mymenu');
+}
+function startSessionWatch(){
+  if(!uid||!mySid)return;
+  clearInterval(sessionTimer);
+  sessionTimer=setInterval(async()=>{
+    try{
+      const v=await restJson('/sessions/'+encodeURIComponent(uid));
+      if(!v||v.sid!==mySid){
+        clearInterval(sessionTimer);sessionTimer=null;
+        alert('다른 기기에서 이 계정으로 로그인되어 자동 로그아웃되었습니다.');
+        try{firebase.auth().signOut()}catch(e){}
+      }
+    }catch(e){}
+  },4000);
+}
+function stopSessionWatch(){clearInterval(sessionTimer);sessionTimer=null}
 window.confirmNickname=async function(){
   const nick=document.getElementById('nickname-set').value.trim().replace(/\s+/g,' ');
   if(!nick){alert('닉네임을 입력해주세요.');return}
-  nickname=nick;
   if(uid){
+    const cur=await getAccountNick(uid);
+    if(cur){alert('닉네임은 변경할 수 없습니다.');showScreen('screen-start');return}
+    if(await nicknameTaken(nick,uid)){alert('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');return}
     try{
       await db.ref('usernames/'+uid).set({nickname:nick,update:Date.now()});
       fsSet('users',uid,{nickname:nick});
     }catch(e){console.warn('닉네임 저장 실패:',e)}
   }
+  nickname=nick;
   applyNicknameUI();
   updateStartUI();
   showScreen('screen-start');
 };
 window.updateStartUI=function(){
-  const pre=document.getElementById('auth-pre'),post=document.getElementById('auth-post'),menu=document.getElementById('quiz-menu');
+  const pre=document.getElementById('auth-pre'),menu=document.getElementById('quiz-menu');
   pre.classList.toggle('hidden',!!authUser);
-  post.classList.toggle('hidden',!authUser);
   menu.classList.toggle('hidden',!authUser);
   if(authUser){
-    document.getElementById('auth-email').textContent=authUser.email||'(구글 계정)';
-    document.getElementById('auth-badge').textContent=isAdmin?'· 관리자':'';
     document.getElementById('nick-wrap').classList.remove('hidden');
     document.getElementById('admin-btn').classList.toggle('hidden',!isAdmin);
     applyNicknameUI();
@@ -755,11 +790,15 @@ try{
         (async()=>{
           const stored=await getAccountNick(uid);
           if(stored!=='')nickname=stored;
+          mySid='sid_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);
+          try{await db.ref('sessions/'+uid).set({sid:mySid,at:Date.now()})}catch(e){}
+          startSessionWatch();
           updateStartUI();
           if(stored==='')showScreen('screen-nickname');
         })();
       }else{
         nickname='';
+        stopSessionWatch();
         updateStartUI();
         showScreen('screen-start');
       }
@@ -823,28 +862,69 @@ window.rankQuizChanged=function(){
   loadRanking('ranking-standalone-wrap',null,document.getElementById('rank-qsel').value);
 };
 window.refreshRecordsSub=function(){applyNicknameUI()};
+window.__recCache=null;
 window.showMyRecords=async function(){
-  const nick=nickname;
-  if(!nick){alert('닉네임 설정이 필요합니다. 로비에서 변경 버튼을 눌러 닉네임을 정해주세요.');return}
-  document.getElementById('records-title').textContent=nick+' 님의 기록';
-  refreshRecordsSub();
+  if(!nickname){alert('닉네임 설정이 필요합니다. 먼저 닉네임을 정해주세요.');showScreen('screen-nickname');return}
+  document.getElementById('records-title').textContent=nickname+' 님의 기록';
+  document.getElementById('records-sub').textContent='퀴즈를 선택하면 시도(1차·2차…)별 점수를 볼 수 있습니다';
   showScreen('screen-records');
+  window.__recCache={};
+  renderRecordCats();
+};
+async function recordData(qid){
+  if(window.__recCache[qid])return window.__recCache[qid];
+  const val=await restJson('/qlog');
+  const arr=[];
+  if(val)Object.keys(val).forEach(k=>{
+    const v=val[k];
+    if(v&&v.nickname===nickname&&(v.quiz||'common')===qid)arr.push({key:k,val:v});
+  });
+  arr.sort((a,b)=>a.val.date-b.val.date);
+  window.__recCache[qid]=arr;
+  return arr;
+}
+window.renderRecordCats=async function(){
   const wrap=document.getElementById('records-wrap');
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   try{
-    const val=await restJson('/qlog');
-    let data=[];
-    if(val)Object.keys(val).forEach(k=>{const v=val[k];if(v&&v.nickname===nick)data.push({key:k,val:v})});
-    data.sort((a,b)=>a.val.date-b.val.date);
-    if(data.length===0){wrap.innerHTML='<p style="color:#aaa;padding:20px">아직 기록이 없습니다. 퀴즈를 풀어보세요!</p>';return}
-    const byDate=new Map();
-    data.forEach(r=>{
-      const d=String(r.val.date);
-      if(!byDate.has(d))byDate.set(d,[]);
-      byDate.get(d).push(r);
-    });
-    const groups=[...byDate.values()].sort((a,b)=>(a[0].val.date-b[0].val.date));
-    let html='<div class="attempt-tabs" style="margin-bottom:14px">';
+    let html='<div style="display:flex;flex-direction:column;align-items:center;gap:10px">';
+    for(const q of QUIZ_LIST){
+      const arr=await recordData(q.id);
+      const cnt=groupAttempts(arr).length;
+      html+=`<button class="rec-cat-btn" onclick="selectRecordQuiz('${q.id}')">
+        <div style="flex:1;text-align:left"><div style="font-weight:700">${esc(q.title)}</div><div style="font-size:.8em;color:#aaa">${esc(q.desc)}</div></div>
+        <div style="text-align:right"><div style="color:#ffd200;font-weight:800">${cnt}차</div><div style="font-size:.75em;color:#666">시도</div></div>
+      </button>`;
+    }
+    html+='</div>';
+    wrap.innerHTML=html;
+  }catch(e){wrap.innerHTML='<p style="color:#aaa;padding:20px">기록 불러오기 실패</p>'}
+};
+function groupAttempts(arr){
+  const byDate=new Map();
+  arr.forEach(r=>{
+    const d=String(r.val.date);
+    if(!byDate.has(d))byDate.set(d,[]);
+    byDate.get(d).push(r);
+  });
+  return [...byDate.values()].sort((a,b)=>(a[0].val.date-b[0].val.date));
+}
+window.selectRecordQuiz=async function(qid){
+  try{
+    const arr=await recordData(qid);
+    const groups=groupAttempts(arr);
+    window.__recGroups=groups;
+    window.__recQuiz=qid;
+    const qdef=QUIZ_LIST.find(q=>q.id===qid);
+    const wrap=document.getElementById('records-wrap');
+    let html=`<button class="rec-back" onclick="renderRecordCats()">← 퀴즈 선택</button>
+      <div style="font-weight:700;margin:8px 0 14px;color:#ffd200">${esc(qdef?qdef.title:'퀴즈')}</div>`;
+    if(groups.length===0){
+      html+='<p style="color:#aaa;padding:10px">이 퀴즈의 기록이 없습니다.</p>';
+      wrap.innerHTML=html;
+      return;
+    }
+    html+='<div class="attempt-tabs" style="margin-bottom:14px">';
     groups.forEach((list,gi)=>{
       const correct=list.filter(r=>r.val.correct).length;
       const score=Math.round(correct/list.length*100);
@@ -852,33 +932,40 @@ window.showMyRecords=async function(){
     });
     html+='</div><div id="records-group"></div>';
     wrap.innerHTML=html;
-    window.__recordGroups=groups;
     showRecordGroup(0);
-  }catch(e){wrap.innerHTML='<p style="color:#aaa;padding:20px">기록 불러오기 실패</p>'}
+  }catch(e){document.getElementById('records-wrap').innerHTML='<p style="color:#aaa;padding:20px">기록 불러오기 실패</p>'}
 };
 window.showRecordGroup=function(gi){
-  const groups=window.__recordGroups||[];
+  const groups=window.__recGroups||[];
   const container=document.getElementById('records-wrap');
   container.querySelectorAll('.attempt-tab').forEach((b,i)=>b.classList.toggle('on',i===gi));
   const wrap=document.getElementById('records-group');
+  if(!wrap)return;
   const list=groups[gi]||[];
   const qid=(list[0]&&(list[0].val.quiz||'common'))||'common';
   const qdef=QUIZ_LIST.find(q=>q.id===qid);
   const correct=list.filter(r=>r.val.correct).length;
   const score=Math.round(correct/list.length*100);
-  let html=`<div class="rec-hd"><span style="color:#ffd200;font-weight:700">${esc(qdef?qdef.title:'퀴즈')}</span> <span style="color:#aaa">· ${score}점 (${correct}/${list.length} 정답)</span></div>`;
-  list.forEach(r=>{
+  const wrong=list.filter(r=>!r.val.correct);
+  let html=`<div class="rec-hd"><span style="font-weight:700">${gi+1}차 · ${score}점</span> <span style="color:#aaa">(${correct}/${list.length} 정답 · ${esc(qdef?qdef.title:'퀴즈')})</span></div>`;
+  if(wrong.length===0){
+    html+='<p style="color:#4caf50;font-weight:700;padding:14px">오답 없음 — 모두 정답입니다!</p>';
+    wrap.innerHTML=html;
+    return;
+  }
+  html+='<div style="color:#aaa;font-size:.9em;margin-bottom:10px">오답 '+wrong.length+'문제</div>';
+  wrong.forEach(r=>{
     const v=r.val;
-    const got=v.correct?`<span class="ans-got">${esc(v.userAns)}</span>`:`<span class="ans-got wrong">${esc(v.userAns||'(무응답)')} <span style="color:#aaa;font-size:.85em">→ ${esc(v.correctAnswer)}</span></span>`;
+    const got=v.userAns?`<span class="ans-got wrong">${esc(v.userAns)}</span>`:`<span class="ans-got wrong">(무응답)</span>`;
     const ts=new Date(v.date);
-    const timeStr=`${ts.getMonth()+1}월 ${ts.getDate()}일 ${String(ts.getHours()).padStart(2,'0')}:${String(ts.getMinutes()).padStart(2,'0')}`;
+    const timeStr=`${ts.getMonth()+1}월 ${ts.getDate()}일`;
     html+=`<div class="ans-item">
-      <div><span class="ans-result ${v.correct?'y':'n'}">${v.correct?'O':'X'}</span></div>
+      <div><span class="ans-result n">X</span></div>
       <div>
         <div class="ans-q">${esc(v.q)}</div>
         <div class="ans-meta">${esc(v.cat)} · ${timeStr}</div>
       </div>
-      <div class="ans-user">${got}</div>
+      <div class="ans-user">${got}<div style="color:#4caf50;font-weight:700;margin-top:4px">정답: ${esc(v.correctAnswer)}</div></div>
     </div>`;
   });
   wrap.innerHTML=html;
@@ -887,7 +974,7 @@ window.showRecordGroup=function(gi){
 window.startQuiz=async function(qid){
   qid=qid||curQuizId;
   curQuizId=qid;
-  if(!nickname){alert('닉네임 설정 후 퀴즈를 시작할 수 있습니다. 로비에서 변경 버튼을 눌러 닉네임을 정해주세요.');openNicknameSetup();return}
+  if(!nickname){alert('닉네임 설정 후 퀴즈를 시작할 수 있습니다.');showScreen('screen-nickname');return}
   await ensureQuest(qid);
   const pool=getQuestionPool(qid);
   if(pool.length===0){alert('이 퀴즈에 문제가 없습니다.');return}
