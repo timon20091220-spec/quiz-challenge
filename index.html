@@ -140,6 +140,12 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .pw-eye.show .pw-eye-slash{display:block}
 .modal-toggle{color:#9db8ff;font-size:.85em;margin-top:14px;cursor:pointer;text-decoration:underline}
 .modal-toggle:hover{color:#ffd200}
+.lock-toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%) translateY(24px);background:linear-gradient(135deg,#2a1e4f,#171331);border:1px solid rgba(255,210,0,.25);border-radius:18px;padding:16px 20px;display:flex;align-items:center;gap:14px;box-shadow:0 18px 50px rgba(0,0,0,.6);z-index:300;opacity:0;visibility:hidden;transition:opacity .3s,transform .3s,visibility .3s;max-width:min(92%,420px);pointer-events:none;animation:none}
+.lock-toast.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
+.lock-toast .lt-ico{width:46px;height:46px;border-radius:50%;background:rgba(255,210,0,.12);display:flex;align-items:center;justify-content:center;font-size:1.5em;flex-shrink:0;animation:lockShake 2.2s ease-in-out infinite}
+.lock-toast .lt-title{font-weight:800;color:#ffd200;font-size:1.02em}
+.lock-toast .lt-msg{color:#ddd;font-size:.85em;margin-top:3px;line-height:1.45}
+@keyframes lockShake{0%,88%,100%{transform:rotate(0)}90%{transform:rotate(-8deg)}92%{transform:rotate(8deg)}94%{transform:rotate(-6deg)}96%{transform:rotate(6deg)}}
 .link-btn{background:none;border:0;color:#aaa;font-size:.95em;text-decoration:underline;text-underline-offset:4px;text-decoration-color:#555;cursor:pointer;padding:8px 16px}
 .link-btn:hover{color:#ffd200}
 .btn-google{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#333;border:1px solid #ddd;border-radius:12px;font-weight:700;padding:13px 24px;cursor:pointer;transition:box-shadow .2s}
@@ -419,9 +425,8 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
                 <select id="qf-cat" class="qf-input"><option>역사</option><option>과학</option><option>재밌는</option></select>
               </div>
               <div><label class="qf-label">유형</label>
-                <select id="qf-type" class="qf-input" onchange="toggleQuestType()"><option value="주관식">주관식</option><option value="객관식">객관식</option></select>
+<select id="qf-type" class="qf-input" onchange="toggleQuestType()"><option value="주관식">주관식</option><option value="객관식">객관식</option></select>
               </div>
-            </div>
             <div id="qf-obj" class="hidden">
               <label class="qf-label">보기 (4개)</label>
               <input id="qf-o1" class="qf-input" placeholder="보기 1" autocomplete="off">
@@ -491,6 +496,14 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
     </div>
   </div>
 </div>
+
+<div id="lock-toast" class="lock-toast" role="status">
+    <div class="lt-ico">🔒</div>
+    <div>
+      <div class="lt-title" id="lock-toast-title">아직 준비 중인 퀴즈예요</div>
+      <div class="lt-msg" id="lock-toast-msg">문제가 정리되면 열릴 거예요. 조금만 기다려주세요!</div>
+    </div>
+  </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -851,9 +864,23 @@ window.toggleQuizLock=function(qid){
     renderLockButtons();
   }).catch(()=>{});
 };
+let lockToastTimer=null;
+window.showLockToast=function(title,msg){
+  const t=document.getElementById('lock-toast');
+  if(!t)return;
+  document.getElementById('lock-toast-title').textContent=title||'아직 준비 중인 퀴즈예요';
+  document.getElementById('lock-toast-msg').textContent=msg||'문제가 정리되면 열릴 거예요. 조금만 기다려주세요!';
+  t.classList.add('show');
+  clearTimeout(lockToastTimer);
+  lockToastTimer=setTimeout(()=>t.classList.remove('show'),2800);
+};
 window.openQuizLobby=function(qid){
   curQuizId=qid||'common';
-  if(isQuizLocked(curQuizId)){alert('아직 문제를 준비 중인 퀴즈입니다.');return}
+  if(isQuizLocked(curQuizId)){
+    const def=QUIZ_LIST.find(q=>q.id===curQuizId);
+    showLockToast((def?def.title+' 퀴즈는':'이 퀴즈는')+' 아직 준비 중이에요',(def?def.title+' 퀴즈는':'이 퀴즈는')+' 문제가 정리되는 중이에요. 조금만 기다려주세요!');
+    return;
+  }
   const def=QUIZ_LIST.find(q=>q.id===curQuizId)||QUIZ_LIST[0];
   document.getElementById('ql-logo').textContent=def.title;
   document.getElementById('ql-icon').textContent=def.icon||'💡';
