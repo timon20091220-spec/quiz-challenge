@@ -63,9 +63,12 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .score-item .val{font-size:1.5em;font-weight:700}
 .score-item .lbl{font-size:.8em;color:#aaa;margin-top:3px}
 .ranking-card{background:rgba(255,255,255,.07);border-radius:16px;padding:30px;margin-bottom:20px}
-.ranking-table{width:100%;border-collapse:collapse}
-.ranking-table th{text-align:left;padding:12px 10px;border-bottom:2px solid #444;color:#aaa;font-size:.85em}
-.ranking-table td{padding:12px 10px;border-bottom:1px solid rgba(255,255,255,.05)}
+.ranking-table{width:100%;border-collapse:collapse;table-layout:fixed;text-align:center}
+.ranking-table th{text-align:center;padding:12px 6px;border-bottom:2px solid #444;color:#aaa;font-size:.85em}
+.ranking-table td{padding:12px 6px;border-bottom:1px solid rgba(255,255,255,.05);text-align:center}
+.ranking-table th:nth-child(1){width:18%}
+.ranking-table th:nth-child(2){width:40%}
+.ranking-table th:nth-child(3),.ranking-table th:nth-child(4){width:21%}
 .ranking-table tr.my-rank{background:rgba(255,210,0,.1)}
 .rank-medal{font-size:1.2em}
 .rank-name{font-weight:600}
@@ -261,7 +264,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
     <div class="logo" style="font-size:2.2em">닉네임 설정</div>
     <p style="color:#aaa;margin:10px 0 16px;line-height:1.6">이 계정에서 사용할 닉네임을 정해주세요.<br>닉네임은 정한 뒤 <b style="color:#fff">변경할 수 없고</b>,<br>다른 사람과 겹칠 수 없습니다.</p>
     <div class="input-group" style="text-align:center;width:min(92%,360px)">
-      <input type="text" id="nickname-set" placeholder="닉네임 (최대 20자)" maxlength="20" autocomplete="off" onkeydown="if(event.key==='Enter')confirmNickname()">
+      <input type="text" id="nickname-set" placeholder="닉네임 (5글자 이내)" maxlength="5" autocomplete="off" onkeydown="if(event.key==='Enter')confirmNickname()">
     </div>
     <div style="margin-top:16px">
       <button class="btn btn-primary" onclick="confirmNickname()">확인</button>
@@ -811,6 +814,7 @@ function stopSessionWatch(){clearInterval(sessionTimer);sessionTimer=null}
 window.confirmNickname=async function(){
   const nick=document.getElementById('nickname-set').value.trim().replace(/\s+/g,' ');
   if(!nick){alert('닉네임을 입력해주세요.');return}
+  if(nick.length>5){alert('닉네임은 5글자 이내로 입력해주세요.');return}
   if(uid){
     const cur=await getAccountNick(uid);
     if(cur){alert('닉네임은 변경할 수 없습니다.');showScreen('screen-start');return}
@@ -1389,12 +1393,11 @@ const val=await restJson('/'+rankNodePath(qid));
     data.sort((a,b)=>(b.score-a.score)||(a.time-b.time));
     data=data.slice(0,50);
     if(data.length===0){wrap.innerHTML='<p style="color:#aaa;padding:20px">아직 랭킹 데이터가 없습니다</p>';return}
-    let html='<table class="ranking-table"><thead><tr><th>#</th><th>닉네임</th><th>점수</th><th>정답</th><th>시간</th></tr></thead><tbody>';
+let html='<table class="ranking-table"><thead><tr><th>#</th><th>닉네임</th><th>점수</th><th>정답</th></tr></thead><tbody>';
     data.forEach((r,i)=>{
       const isMe=myScore!==null&&r.nickname===nickname&&r.score===myScore;
       const medal=i===0?'1st':i===1?'2nd':i===2?'3rd':`${i+1}`;
-      const tm=Math.floor(r.time/60),ts=r.time%60;
-      html+=`<tr class="${isMe?'my-rank':''}"><td class="rank-medal">${medal}</td><td class="rank-name">${esc(r.nickname)}</td><td class="rank-score">${r.score}점</td><td>${r.correct}/${r.total}</td><td class="rank-time">${tm}분 ${ts}초</td></tr>`;
+      html+=`<tr class="${isMe?'my-rank':''}"><td class="rank-medal">${medal}</td><td class="rank-name">${esc(r.nickname)}</td><td class="rank-score">${r.score}점</td><td>${r.correct}/${r.total}</td></tr>`;
     });
     const title=QUIZ_LIST.find(q=>q.id===qid);
     html=(title?`<div class="rank-title">${esc(title.title)}</div>`:'')+html;
