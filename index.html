@@ -136,7 +136,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
     <p class="subtitle">128문제 중 32문제를 랜덤으로 출제합니다<br>주관식 + 객관식 혼합 / 역사 / 과학 / 재밌는</p>
     <div class="input-group">
       <label for="nickname">닉네임</label>
-      <input type="text" id="nickname" placeholder="닉네임을 입력하세요" maxlength="20">
+      <input type="text" id="nickname" placeholder="닉네임을 입력하세요" maxlength="20" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
     </div>
     <div style="margin-top:20px">
       <button class="btn btn-primary" onclick="startQuiz()">퀴즈 시작</button>
@@ -237,7 +237,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
     <div class="modal-card">
       <h3>관리자 인증</h3>
       <p class="modal-sub">비밀번호를 입력해주세요</p>
-      <input type="password" id="admin-pw" placeholder="비밀번호">
+      <input type="password" id="admin-pw" placeholder="비밀번호" autocomplete="new-password">
       <div class="modal-btns">
         <button class="btn btn-primary" onclick="adminLogin()">확인</button>
         <button class="btn btn-secondary" onclick="adminCancel()">취소</button>
