@@ -116,6 +116,23 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .modal-btns{display:flex;gap:12px;justify-content:center}
 .modal-btns .btn{margin:0;padding:12px 30px}
 .modal-card input[type=email]{letter-spacing:0}
+.modal-close{position:absolute;top:12px;right:14px;background:none;border:0;color:#aaa;font-size:1.1em;cursor:pointer}
+.modal-close:hover{color:#ffd200}
+.modal-card{position:relative}
+.modal-card .input-group .label{font-size:.8em;color:#aaa;display:block;text-align:left;margin-bottom:6px}
+.modal-card .input-group input:not(.hidden){margin-bottom:0}
+.modal-card .input-group{margin:4px 0 14px}
+.modal-card input[type=text],.modal-card input[type=email],.modal-card input[type=password]{letter-spacing:.5px}
+.pw-wrap{position:relative;display:flex;align-items:center}
+.pw-wrap input{flex:1;padding-right:46px;text-align:left !important;letter-spacing:2px}
+.pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;color:#aaa;font-size:1em;cursor:pointer;padding:8px;opacity:.7}
+.pw-eye:hover{opacity:1;color:#ffd200}
+.modal-toggle{color:#9db8ff;font-size:.85em;margin-top:14px;cursor:pointer;text-decoration:underline}
+.modal-toggle:hover{color:#ffd200}
+.link-btn{background:none;border:0;color:#aaa;font-size:.95em;text-decoration:underline;text-underline-offset:4px;text-decoration-color:#555;cursor:pointer;padding:8px 16px}
+.link-btn:hover{color:#ffd200}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#333;border:1px solid #ddd;border-radius:12px;font-weight:700;padding:13px 24px;cursor:pointer;transition:box-shadow .2s}
+.btn-google:hover{box-shadow:0 2px 10px rgba(255,255,255,.15)}
 .quiz-menu-item{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 14px;width:min(92%,430px);transition:border .2s}
 .quiz-menu-item:hover{border-color:rgba(255,210,0,.5);background:rgba(255,210,0,.06)}
 .qq-arrow{color:#ffd200;font-size:1.2em}
@@ -176,9 +193,20 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
   </div>
 <div id="screen-start" class="screen hidden">
     <div class="logo">퀴즈챌린지</div>
-    <div id="auth-pre" style="margin-top:18px">
-      <button class="btn btn-primary" style="margin:6px 4px" onclick="googleLogin()">Google로 로그인</button>
-      <button class="btn btn-secondary" style="margin:6px 4px" onclick="openEmailLogin()">이메일 로그인</button>
+    <div id="auth-gate" style="margin-top:22px;display:flex;flex-direction:column;align-items:center;gap:12px">
+      <button class="btn btn-primary" style="width:min(92%,300px);padding:14px 24px;font-size:1.05em" onclick="showLoginOptions()">로그인</button>
+      <button class="link-btn" onclick="openSignup()">회원가입</button>
+    </div>
+    <div id="auth-login-options" class="hidden" style="margin-top:22px;display:flex;flex-direction:column;align-items:center;gap:12px">
+      <p style="color:#aaa;font-size:.9em">계정 선택</p>
+      <button class="btn btn-google" style="width:min(92%,300px)" onclick="googleLogin()">
+        <span class="google-g" style="width:20px;height:20px;flex:0 0 20px">
+        <svg viewBox="0 0 48 48" width="20" height="20"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      </span>
+        <span>구글로 계속</span>
+      </button>
+      <button class="btn btn-secondary" style="width:min(92%,300px)" onclick="openEmailLogin()">이메일로 로그인</button>
+      <button class="link-btn" onclick="hideLoginOptions()">← 뒤로</button>
     </div>
     <div id="quiz-menu" class="hidden" style="margin-top:18px">
       <div id="nick-wrap" class="hidden" style="margin-bottom:20px">
@@ -386,17 +414,32 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
       <button class="btn btn-secondary" onclick="goStart()">돌아가기</button>
     </div>
   </div>
-  <div id="email-modal" class="modal-overlay hidden">
+<div id="email-modal" class="modal-overlay hidden">
     <div class="modal-card">
-      <h3 id="email-modal-title">이메일 로그인</h3>
-      <p class="modal-sub" id="email-modal-sub">계정 정보를 입력해주세요</p>
-      <input type="email" id="em-email" placeholder="이메일" autocomplete="off">
-      <input type="password" id="em-pw" placeholder="비밀번호" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')">
-      <div class="modal-btns">
-        <button class="btn btn-primary" id="email-modal-btn" onclick="emailLogin()">로그인</button>
-        <button class="btn btn-secondary" onclick="toggleEmailMode()" id="email-mode-btn">회원가입</button>
-        <button class="btn btn-secondary" onclick="closeEmailLogin()">취소</button>
+      <button class="modal-close" onclick="closeEmailLogin()" aria-label="닫기">✕</button>
+      <h3 id="email-modal-title">이메일 계정을 입력해주세요</h3>
+      <p class="modal-sub" id="email-modal-sub">로그인 또는 회원가입을 진행합니다</p>
+      <div class="input-group" style="text-align:left;margin:10px 0">
+        <label for="em-email">이메일</label>
+        <input type="email" id="em-email" placeholder="you@example.com" autocomplete="off">
       </div>
+      <div class="input-group" style="text-align:left;margin:10px 0">
+        <label for="em-pw" id="em-pw-label">비밀번호</label>
+        <div class="pw-wrap">
+          <input type="password" id="em-pw" placeholder="비밀번호" autocomplete="off">
+          <button type="button" class="pw-eye" onclick="togglePwVis('em-pw')" aria-label="비밀번호 보기">👁</button>
+        </div>
+      </div>
+      <div class="input-group hidden" id="em-pw2-group" style="text-align:left;margin:10px 0">
+        <label for="em-pw2">비밀번호 확인</label>
+        <div class="pw-wrap">
+          <input type="password" id="em-pw2" placeholder="비밀번호 한번 더" autocomplete="off">
+          <button type="button" class="pw-eye" onclick="togglePwVis('em-pw2')" aria-label="비밀번호 보기">👁</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:14px" id="email-modal-btn" onclick="emailLogin()">로그인</button>
+      <p class="modal-toggle" id="email-mode-btn" onclick="toggleEmailMode()">아직 계정이 없나요? 회원가입</p>
+      <p class="modal-sub" style="color:#777;font-size:.75em;margin-top:6px">회원가입 없이는 구글 계정으로도 로그인할 수 없습니다</p>
     </div>
   </div>
 </div>
@@ -694,7 +737,10 @@ function getQuestionPool(qid){
   return out;
 }
 
-let uid='',mySid='',sessionTimer=null;
+let uid='',mySid='',sessionTimer=null,pendingSignup=false,gateAlerted=false;
+window.showLoginOptions=function(){document.getElementById('auth-gate').classList.add('hidden');document.getElementById('auth-login-options').classList.remove('hidden')};
+window.hideLoginOptions=function(){document.getElementById('auth-gate').classList.remove('hidden');document.getElementById('auth-login-options').classList.add('hidden')};
+window.openSignup=function(){openEmailLogin('signup')};
 async function getAccountNick(u){
   if(!u)return '';
   try{const v=await restJson('/usernames/'+encodeURIComponent(u));return (v&&v.nickname)?v.nickname:''}catch(e){return ''}
@@ -750,9 +796,11 @@ window.confirmNickname=async function(){
   showScreen('screen-start');
 };
 window.updateStartUI=function(){
-  const pre=document.getElementById('auth-pre'),menu=document.getElementById('quiz-menu');
-  pre.classList.toggle('hidden',!!authUser);
-  menu.classList.toggle('hidden',!authUser);
+  const gate=document.getElementById('auth-gate'),options=document.getElementById('auth-login-options'),menu=document.getElementById('quiz-menu');
+  const logged=!!authUser;
+  gate.classList.toggle('hidden',logged);
+  options.classList.add('hidden');
+  menu.classList.toggle('hidden',!logged);
   const note=document.getElementById('login-note');
   if(note)note.textContent=authUser?((authUser.email||'(구글 계정)')+' · 로그인됨'):'';
   if(authUser){
@@ -806,6 +854,30 @@ function init(){
       uid=user?user.uid:'';
       if(user){
         (async()=>{
+          let registered=true;
+          if(!pendingSignup){
+            try{
+              registered=!!(await restJson('/registered/'+encodeURIComponent(uid)));
+              if(!registered){
+                const nick=await getAccountNick(uid);
+                if(nick!=='')registered=true;
+              }
+            }catch(e){registered=true}
+          }
+          if(!registered){
+            if(!gateAlerted){
+              gateAlerted=true;
+              alert('가입되지 않은 계정입니다. 먼저 회원가입을 해주세요.\n(이 Google/이메일 계정으로는 로그인할 수 없습니다)');
+              setTimeout(()=>{gateAlerted=false},1200);
+            }
+            stopSessionWatch();
+            try{await firebase.auth().signOut()}catch(e){}
+            updateStartUI();
+            routeAfterAuth();
+            return;
+          }
+          pendingSignup=false;
+          gateAlerted=false;
           const stored=await getAccountNick(uid);
           if(stored!=='')nickname=stored;
           mySid='sid_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);
@@ -827,43 +899,80 @@ window.googleLogin=async function(){
   try{
     await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
   }catch(e){
-    if(e.code==='auth/popup-blocked')alert('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.');
-    else if(e.code==='auth/unauthorized-domain'||e.code==='auth/operation-not-allowed')alert('Firebase 콘솔에서 구글 로그인 프로바이더를 활성화하고, 인증 도메인에 "'+location.hostname+'" 를 추가해야 구글 로그인이 동작합니다.\n(이메일 로그인은 바로 사용 가능)');
-    else alert('구글 로그인 실패: '+(e.message||e.code));
+    const c=e.code||'';
+    if(c==='auth/popup-blocked')alert('팝업이 차단되었습니다. 주소창의 팝업 차단을 허용한 뒤 다시 시도해주세요.');
+    else if(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request'){}
+    else if(c==='auth/unauthorized-domain'||c==='auth/operation-not-allowed')alert('Firebase 콘솔에서 구글 로그인을 활성화하고 인증 도메인에 "'+location.hostname+'" 를 추가해주세요.');
+    else alert('구글 로그인 실패: '+(e.message||c));
   }
 };
-window.openEmailLogin=function(){
-  emailMode='login';
-  document.getElementById('email-modal-title').textContent='이메일 로그인';
-  document.getElementById('email-modal-sub').textContent='계정 정보를 입력해주세요';
-  document.getElementById('email-modal-btn').textContent='로그인';
-  document.getElementById('email-mode-btn').textContent='회원가입';
-  document.getElementById('em-email').value='';
+window.togglePwVis=function(id){
+  const inp=document.getElementById(id);
+  inp.type=inp.type==='password'?'text':'password';
+};
+window.openEmailLogin=function(mode){
+  emailMode=(mode==='signup')?'signup':'login';
+  if(emailMode==='signup')document.getElementById('em-email').value='';
   document.getElementById('em-pw').value='';
+  document.getElementById('em-pw2').value='';
   document.getElementById('email-modal').classList.remove('hidden');
+  renderEmailModeUI();
+  setTimeout(()=>document.getElementById('em-email').focus(),60);
+};
+window.renderEmailModeUI=function(){
+  const signup=emailMode==='signup';
+  document.getElementById('email-modal-title').textContent=signup?'이메일 회원가입':'이메일 로그인';
+  document.getElementById('email-modal-sub').textContent=signup?'새 계정을 만들어주세요':'계정 정보를 입력해주세요';
+  document.getElementById('email-modal-btn').textContent=signup?'가입하기':'로그인';
+  document.getElementById('email-mode-btn').textContent=signup?'이미 계정이 있나요? 로그인':'아직 계정이 없나요? 회원가입';
+  document.getElementById('em-pw2-group').classList.toggle('hidden',!signup);
+  const pwInp=document.getElementById('em-pw');
+  if(!signup)pwInp.type='password';
 };
 window.closeEmailLogin=function(){document.getElementById('email-modal').classList.add('hidden')};
 window.toggleEmailMode=function(){
   emailMode=emailMode==='login'?'signup':'login';
-  document.getElementById('email-modal-title').textContent=emailMode==='signup'?'이메일 회원가입':'이메일 로그인';
-  document.getElementById('email-modal-sub').textContent=emailMode==='signup'?'새 계정을 만들어주세요':'계정 정보를 입력해주세요';
-  document.getElementById('email-modal-btn').textContent=emailMode==='signup'?'가입하기':'로그인';
-  document.getElementById('email-mode-btn').textContent=emailMode==='signup'?'로그인으로 전환':'회원가입';
+  renderEmailModeUI();
 };
 window.emailLogin=async function(){
   const email=document.getElementById('em-email').value.trim();
   const pw=document.getElementById('em-pw').value;
   if(!email||!pw){alert('이메일과 비밀번호를 입력해주세요.');return}
+  const signup=emailMode==='signup';
+  if(signup){
+    const pw2=document.getElementById('em-pw2').value;
+    if(pw!==pw2){alert('비밀번호 확인이 일치하지 않습니다.');return}
+  }
   try{
-    if(emailMode==='signup')await firebase.auth().createUserWithEmailAndPassword(email,pw);
-    else await firebase.auth().signInWithEmailAndPassword(email,pw);
+    if(signup){
+      pendingSignup=true;
+      await firebase.auth().createUserWithEmailAndPassword(email,pw);
+      const u=firebase.auth().currentUser;
+      if(u){
+        try{await db.ref('registered/'+u.uid).set({at:Date.now()})}catch(e){console.warn('가입 기록 저장 실패:',e)}
+        fsSet('users',u.uid,{email:email,registered:true});
+      }
+      pendingSignup=false;
+      gateAlerted=false;
+    }else{
+      pendingSignup=false;
+      await firebase.auth().signInWithEmailAndPassword(email,pw);
+    }
     closeEmailLogin();
   }catch(e){
-    if(e.code==='auth/email-already-in-use')alert('이미 가입된 이메일입니다. 로그인으로 전환하거나 비밀번호를 확인해주세요.');
-    else if(e.code==='auth/invalid-email')alert('올바른 이메일 주소가 아닙니다.');
-    else if(e.code==='auth/weak-password')alert('비밀번호는 6자 이상이어야 합니다.');
-    else if(e.code==='auth/user-not-found'||e.code==='auth/wrong-password')alert('이메일 또는 비밀번호가 일치하지 않습니다.');
-    else alert('로그인 실패: '+(e.message||e.code));
+    const c=e.code||'';
+    if(signup){
+      if(c==='auth/email-already-in-use')alert('이미 가입된 이메일입니다. \'아직 계정이 없나요?\' → 로그인으로 전환해주세요.');
+      else if(c==='auth/invalid-email')alert('올바른 이메일 주소가 아닙니다.');
+      else if(c==='auth/weak-password')alert('비밀번호는 6자 이상이어야 합니다.');
+      else if(c==='auth/invalid-credential'||c==='auth/email-already-in-use')alert('이미 계정이 만들어진 이메일입니다. 로그인으로 전환해주세요.');
+      else alert('회원가입 실패: '+(e.message||c));
+    }else{
+      if(c==='auth/invalid-email')alert('올바른 이메일 주소가 아닙니다.');
+      else if(c==='auth/invalid-credential'||c==='auth/user-not-found'||c==='auth/wrong-password')alert('가입되지 않은 계정이거나 비밀번호가 일치하지 않습니다.\n아직 가입하지 않았다면 회원가입을 먼저 해주세요.');
+      else alert('로그인 실패: '+(e.message||c));
+    }
+    pendingSignup=false;
   }
 };
 window.logout=function(){firebase.auth().signOut()};
@@ -1175,7 +1284,7 @@ async function finishQuiz(){
           console.log('이미 랭킹에 등록된 닉네임입니다. 첫 기록이 유지됩니다.');
 }else{
           await db.ref(rankNodePath(curQuizId)).push({uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
-          fsAdd('rankings',{quiz:curQuizId,uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
+          fsSet('rankings',(nickname+'_'+Date.now()).replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),{quiz:curQuizId,uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
           saved=true;
         }
       }catch(e){console.warn('랭킹 저장 실패:',e)}
@@ -1193,14 +1302,21 @@ async function finishQuiz(){
       try{
         const logMap={};attemptLog.forEach(a=>logMap[a.id]=a);
         const qlRef=db.ref('qlog'),now=Date.now();
+        const playerDocs=[];
         const writes=currentQuiz.map(q=>{
           const a=logMap[q.id];
           if(!a)return Promise.resolve();
           const correctAnswer=q.t==='객관식'?q.o[q.a]:q.a[0];
-          fsAdd('qlog',{quiz:curQuizId,uid:uid,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
-          return qlRef.push({quiz:curQuizId,uid:uid,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
+          const rec={quiz:curQuizId,uid:uid,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now};
+          playerDocs.push(rec);
+          return qlRef.push(rec);
         });
         await Promise.allSettled(writes);
+        if(playerDocs.length&&fsReady){
+          const arrU=firebase.firestore.FieldValue.arrayUnion;
+          fsSet('players',(nickname||'empty').replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),
+            {attempts:arrU(...playerDocs),quiz:curQuizId,last:now},{merge:true});
+        }
       }catch(e){console.warn('답안 기록 저장 실패:',e)}
       if(saved)loadRanking('ranking-result-wrap',pct,curQuizId);
     })();
@@ -1317,17 +1433,23 @@ window.renderAttemptView=function(idx){
     html+=`<button class="attempt-tab${active}" onclick="renderAttemptView(${ai})">${ai+1}차 · ${score}점</button>`;
   });
   html+=`</div>`;
-  const list=attempts[attemptSel]||[];
-  list.forEach(r=>{
+const list=attempts[attemptSel]||[];
+  const wrong=list.filter(r=>!r.val.correct);
+  if(wrong.length===0){
+    det.innerHTML=html+'<p style="color:#4caf50;font-weight:700;padding:14px">이 시도에서 오답이 없습니다 — 모두 정답입니다.</p>';
+    return;
+  }
+  html+=`<div style="color:#aaa;font-size:.9em;margin:6px 0 8px">오답 ${wrong.length}문제 (이 시도)</div>`;
+  wrong.forEach(r=>{
     const v=r.val;
-    const got=v.correct?`<span class="ans-got">${esc(v.userAns)}</span>`:`<span class="ans-got wrong">${esc(v.userAns||'(무응답)')} <span style="color:#aaa;font-size:.85em">→ ${esc(v.correctAnswer)}</span></span>`;
+    const got=v.userAns?`<span class="ans-got wrong">${esc(v.userAns)}</span>`:`<span class="ans-got wrong">(무응답)</span>`;
     html+=`<div class="ans-item">
-      <div><span class="ans-result ${v.correct?'y':'n'}">${v.correct?'O':'X'}</span></div>
+      <div><span class="ans-result n">X</span></div>
       <div>
         <div class="ans-q">${esc(v.q)}</div>
         <div class="ans-meta">${esc(v.cat)}</div>
       </div>
-      <div class="ans-user">${got}</div>
+      <div class="ans-user">${got}<div style="color:#4caf50;font-weight:700;margin-top:4px">정답: ${esc(v.correctAnswer)}</div></div>
     </div>`;
   });
   det.innerHTML=html;
