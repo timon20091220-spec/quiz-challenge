@@ -320,6 +320,12 @@ const firebaseConfig={apiKey:"AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k",authDomai
 const ADMIN_PW='triuytje123!';
 let db,firebaseReady=false;try{firebase.initializeApp(firebaseConfig);db=firebase.database();firebaseReady=true}catch(e){console.warn("파이어베이스 연결 실패:",e)}
 
+async function restJson(path){
+  const resp=await fetch('https://quiz-ranking-6cb9f-default-rtdb.firebaseio.com'+path+'.json');
+  if(!resp.ok)throw new Error('HTTP '+resp.status);
+  return resp.json();
+}
+
 function normalize(s){
   return s.toLowerCase()
     .replace(/장군|왕|법칙|의|이식|에서|곱하기|나누기|더하기|빼기|프로|퍼센트|약|개|번|회|도|년|월|일|톤|km|cm|m|리터|억|kg|g|명|배|글자|초|시간|분|개월|%|원|SHU|℃|g/g,'')
@@ -477,13 +483,10 @@ function init(){
 async function ensureQuest(){
   if(questData!==null)return questData;
   questData={};
-  if(firebaseReady){
-    try{
-      const snap=await db.ref('quest').once('value');
-      const d={};snap.forEach(c=>d[c.key]=c.val());
-      questData=d;
-    }catch(e){console.warn('커스텀 문제 로드 실패:',e);questData={}}
-  }
+  try{
+    const d=await restJson('/quest');
+    questData=d||{};
+  }catch(e){console.warn('커스텀 문제 로드 실패:',e);questData={}}
   return questData;
 }
 function getQuestionPool(){
@@ -678,9 +681,9 @@ async function finishQuiz(){
     (async()=>{
       let saved=false;
       try{
-        const snap=await db.ref('rankings').once('value');
+        const val=await restJson('/rankings');
         let exists=false;
-        snap.forEach(c=>{if(c.val().nickname===nickname)exists=true});
+        if(val)Object.keys(val).forEach(k=>{const v=val[k];if(v&&v.nickname===nickname)exists=true});
         if(exists){
           // 이미 같은 닉네임이 기록되어 있으면 무시 (첫 번째 것만 기록 유지)
           console.log('이미 랭킹에 등록된 닉네임입니다. 첫 기록이 유지됩니다.');
@@ -721,8 +724,9 @@ async function loadRanking(containerId,myScore){
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-    const snap=await db.ref('rankings').once('value');
-    let data=[];snap.forEach(c=>data.push(c.val()));
+    const val=await restJson('/rankings');
+    let data=[];
+    if(val)Object.keys(val).forEach(k=>data.push(val[k]));
     data.sort((a,b)=>(b.score-a.score)||(a.time-b.time));
     data=data.slice(0,50);
     if(data.length===0){wrap.innerHTML='<p style="color:#aaa;padding:20px">아직 랭킹 데이터가 없습니다</p>';return}
@@ -747,8 +751,9 @@ async function loadPlayers(){
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-    const snap=await db.ref('rankings').once('value');
-    let data=[];snap.forEach(c=>data.push({key:c.key,val:c.val()}));
+    const val=await restJson('/rankings');
+    let data=[];
+    if(val)Object.keys(val).forEach(k=>data.push({key:k,val:val[k]}));
     data.sort((a,b)=>(b.val.score-a.val.score)||(a.val.time-b.val.time));
     playerList=data.map(r=>r.val.nickname);
     if(data.length===0){wrap.innerHTML='<p style="color:#aaa;padding:20px">아직 랭킹 데이터가 없습니다</p>';return}
@@ -776,8 +781,9 @@ window.showPlayerDetail=async function(i){
   det.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){det.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-    const snap=await db.ref('qlog').once('value');
-    let data=[];snap.forEach(c=>{if(c.val().nickname===nick)data.push({key:c.key,val:c.val()})});
+    const val=await restJson('/qlog');
+    let data=[];
+    if(val)Object.keys(val).forEach(k=>{const v=val[k];if(v&&v.nickname===nick)data.push({key:k,val:v})});
     data.sort((a,b)=>b.val.date-a.val.date);
     if(data.length===0){
       det.innerHTML=`<div class="detail-back"><div><h3>${esc(nick)}</h3></div><button class="btn btn-secondary" onclick="loadPlayers()">뒤로</button></div><p style="color:#aaa;padding:20px">답안 기록이 없습니다</p>`;
@@ -848,9 +854,9 @@ async function loadAnalysis(){
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
     await ensureQuest();
-    const snap=await db.ref('qstats').once('value');
+    const val=await restJson('/qstats');
     const stats={};
-    snap.forEach(c=>{stats[c.key]=c.val()});
+    if(val)Object.keys(val).forEach(k=>{stats[k]=val[k]});
     analysisStats=getQuestionPool().map(q=>{
       const s=stats[q.id]||{tries:0,wrong:0};
       return {q:q,tries:s.tries||0,wrong:s.wrong||0};
