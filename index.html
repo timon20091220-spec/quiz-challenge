@@ -512,7 +512,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-const APP_VER='v18';
+const APP_VER='v19';
 (function(){try{var m=(location.search||'').match(/[?&]v=([^&]*)/);if(!m||decodeURIComponent(m[1])!==APP_VER)location.replace(location.pathname+'?v='+APP_VER)}catch(e){}})();
 window.__dbgErrs=[];
 function showDbg(msg){
@@ -1552,13 +1552,9 @@ async function finishQuiz(){
         if(rows===undefined||rows===null)rows=[];
         let mine=null;
         rows.forEach(v=>{if(v&&v.nickname===nickname&&v.id)mine=v});
-        const rec={quiz:curQuizId,uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()};
         if(!mine){
           fsSet('rankings',curQuizId,{quiz:curQuizId,updated:Date.now()},{merge:true});
-          fsSet('rankings/'+curQuizId+'/records',(nickname+'_'+Date.now()).replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),rec);
-          saved=true;
-        }else if(pct>(mine.score||0)){
-          fsSet('rankings/'+curQuizId+'/records',mine.id,rec,{merge:true});
+          fsSet('rankings/'+curQuizId+'/records',(nickname+'_'+Date.now()).replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),{quiz:curQuizId,uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
           saved=true;
         }
       }catch(e){console.warn('랭킹 저장 실패:',e)}
