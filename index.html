@@ -63,6 +63,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .score-item .val{font-size:1.5em;font-weight:700}
 .score-item .lbl{font-size:.8em;color:#aaa;margin-top:3px}
 .ranking-card{background:rgba(255,255,255,.07);border-radius:16px;padding:30px;margin-bottom:20px}
+.ql-card{background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.03));border:1px solid rgba(255,210,0,.25);border-radius:22px;padding:36px 24px 28px;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:center;max-width:360px;margin:0 auto}
 .ranking-table{width:100%;border-collapse:collapse;table-layout:fixed;text-align:center}
 .ranking-table th{text-align:center;padding:12px 6px;border-bottom:2px solid #444;color:#aaa;font-size:.85em}
 .ranking-table td{padding:12px 6px;border-bottom:1px solid rgba(255,255,255,.05);text-align:center}
@@ -277,13 +278,17 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
     </div>
   </div>
   <div id="screen-quiz-lobby" class="screen hidden">
-    <div class="logo" id="ql-logo" style="font-size:2.4em">상식 퀴즈 챌린지</div>
-    <button class="btn btn-primary" onclick="startQuiz()">퀴즈 시작</button>
-    <div style="margin-top:6px">
-      <button class="btn btn-secondary" onclick="showRankingOnly(curQuizId)">랭킹</button>
-    </div>
-    <div style="margin-top:22px">
-      <button class="btn btn-secondary" style="padding:8px 16px;font-size:.85em" onclick="goStart()">퀴즈챌린지 로비로</button>
+    <div class="ql-card">
+      <div style="font-size:4em;line-height:1;margin-bottom:14px" id="ql-icon">💡</div>
+      <div class="logo" id="ql-logo" style="font-size:2.1em">상식 퀴즈 챌린지</div>
+      <p style="color:#bbbbdd;font-size:.92em;margin:12px 0 4px">맞혀보세요! 오답은 마지막에 확인할 수 있어요.</p>
+      <button class="btn btn-primary" style="margin-top:22px" onclick="startQuiz()">퀴즈 시작</button>
+      <div style="margin-top:8px">
+        <button class="btn btn-secondary" onclick="showRankingOnly(curQuizId)">랭킹</button>
+      </div>
+      <div style="margin-top:26px">
+        <button class="btn btn-secondary" style="padding:8px 16px;font-size:.85em" onclick="goStart()">로비로</button>
+      </div>
     </div>
   </div>
   <div id="screen-quiz" class="screen hidden">
@@ -856,6 +861,7 @@ window.openQuizLobby=function(qid){
   curQuizId=qid||'common';
   const def=QUIZ_LIST.find(q=>q.id===curQuizId)||QUIZ_LIST[0];
   document.getElementById('ql-logo').textContent=def.title;
+  document.getElementById('ql-icon').textContent=def.icon||'💡';
   showScreen('screen-quiz-lobby');
 };
 function routeAfterAuth(){
