@@ -220,6 +220,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 </style>
 </head>
 <body>
+<div id="diag-global" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99998;background:#c62828;color:#fff;font-size:12px;padding:7px 10px;font-family:monospace;word-break:break-all"></div>
 <div class="container">
 <div id="screen-checking" class="screen">
     <div class="logo" style="font-size:1.6em">퀴즈챌린지</div>
@@ -383,7 +384,6 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
       <h2 style="margin-bottom:5px">관리자 전용</h2>
       <p style="color:#aaa;margin-bottom:15px;font-size:.9em">문항 오답률 · 답안 기록 분석 · <span id="app-version" style="color:#777"></span></p>
       <div id="analysis-content" class="hidden">
-        <div id="admin-diag" style="border:1px dashed #f66;border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:.78em;color:#ffcccc;text-align:left;line-height:1.7"></div>
         <div style="text-align:center;margin-bottom:16px">
           <select id="admin-qsel" class="analysis-select" onchange="adminQuizChanged()"></select>
         </div>
@@ -415,45 +415,46 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
           <div id="anslog-player-detail" class="hidden"></div>
         </div>
         <div id="quest-wrap" class="hidden" style="text-align:left">
-          <div id="quest-form" class="quest-form hidden">
-            <h3 id="qf-title" style="margin-bottom:4px">새 문제 추가</h3>
-            <p class="modal-sub" id="qf-desc" style="text-align:left;margin-bottom:16px">기본 문제에 추가하거나, 기존 문제를 수정/숨길 수 있습니다</p>
-            <input type="hidden" id="qf-key">
+          <div id="qmgr-list-view">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-primary" style="padding:10px 18px;font-size:.9em;margin:0" onclick="qMgrOpen()">+ 새 문제</button>
+              <input type="text" id="qmgr-search" placeholder="문제 검색..." class="analysis-select" style="flex:1;min-width:140px" oninput="qMgrRender()" autocomplete="off">
+            </div>
+            <div id="qmgr-list"></div>
+          </div>
+          <div id="qmgr-form" class="quest-form hidden">
+            <h3 id="qmgr-title" style="margin-bottom:4px">새 문제 추가</h3>
+            <p class="modal-sub" id="qmgr-desc" style="text-align:left;margin-bottom:16px"></p>
+            <input type="hidden" id="qmgr-key">
             <label class="qf-label">문제</label>
-            <textarea id="qf-q" class="qf-input" rows="2"></textarea>
+            <textarea id="qmgr-q" class="qf-input" rows="2"></textarea>
             <div class="qf-2col">
               <div><label class="qf-label">카테고리</label>
-                <select id="qf-cat" class="qf-input"><option>상식</option><option>재밌는</option><option>역사</option><option>과학</option></select>
+                <select id="qmgr-cat" class="qf-input"></select>
               </div>
               <div><label class="qf-label">유형</label>
-<select id="qf-type" class="qf-input" onchange="toggleQuestType()"><option value="주관식">주관식</option><option value="객관식">객관식</option></select>
+                <select id="qmgr-type" class="qf-input" onchange="qMgrType()"><option value="주관식">주관식</option><option value="객관식">객관식</option></select>
               </div>
-            <div id="qf-obj" class="hidden">
-              <label class="qf-label">보기 (4개)</label>
-              <input id="qf-o1" class="qf-input" placeholder="보기 1" autocomplete="off">
-              <input id="qf-o2" class="qf-input" placeholder="보기 2" autocomplete="off">
-              <input id="qf-o3" class="qf-input" placeholder="보기 3" autocomplete="off">
-              <input id="qf-o4" class="qf-input" placeholder="보기 4" autocomplete="off">
-              <label class="qf-label">정답 위치</label>
-              <select id="qf-a" class="qf-input"><option value="0">보기 1</option><option value="1">보기 2</option><option value="2">보기 3</option><option value="3">보기 4</option></select>
             </div>
-            <div id="qf-subj" class="hidden">
+            <div id="qmgr-obj" class="hidden">
+              <label class="qf-label">보기 (4개)</label>
+              <input id="qmgr-o1" class="qf-input" placeholder="보기 1" autocomplete="off">
+              <input id="qmgr-o2" class="qf-input" placeholder="보기 2" autocomplete="off">
+              <input id="qmgr-o3" class="qf-input" placeholder="보기 3" autocomplete="off">
+              <input id="qmgr-o4" class="qf-input" placeholder="보기 4" autocomplete="off">
+              <label class="qf-label">정답 위치</label>
+              <select id="qmgr-a" class="qf-input"><option value="0">보기 1</option><option value="1">보기 2</option><option value="2">보기 3</option><option value="3">보기 4</option></select>
+            </div>
+            <div id="qmgr-subj" class="hidden">
               <label class="qf-label">정답 (여러 개는 쉼표로 구분)</label>
-              <input id="qf-ans" class="qf-input" placeholder="예: 이성계, 태조" autocomplete="off">
+              <input id="qmgr-ans" class="qf-input" placeholder="예: 이성계, 태조" autocomplete="off">
             </div>
             <label class="qf-label">해설</label>
-            <textarea id="qf-e" class="qf-input" rows="2"></textarea>
+            <textarea id="qmgr-e" class="qf-input" rows="2"></textarea>
             <div class="modal-btns" style="margin-top:18px">
-              <button class="btn btn-primary" onclick="saveQuest()">저장</button>
-              <button class="btn btn-secondary" onclick="closeQuestForm()">취소</button>
+              <button class="btn btn-primary" onclick="qMgrSave()">저장</button>
+              <button class="btn btn-secondary" onclick="qMgrClose()">취소</button>
             </div>
-          </div>
-          <div id="quest-list-view">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap">
-              <button class="btn btn-primary" style="padding:10px 18px;font-size:.9em;margin:0" onclick="openQuestForm()">+ 새 문제 추가</button>
-              <input type="text" id="quest-search" placeholder="문제 검색..." class="analysis-select" style="flex:1;min-width:140px" oninput="renderQuestList()" autocomplete="off">
-            </div>
-            <div id="quest-list"><div class="loading"><div class="spinner"></div></div></div>
           </div>
         </div>
       </div>
@@ -510,7 +511,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-const APP_VER='v11';
+const APP_VER='v12';
 (function(){try{var m=(location.search||'').match(/[?&]v=([^&]*)/);if(!m||decodeURIComponent(m[1])!==APP_VER)location.replace(location.pathname+'?v='+APP_VER)}catch(e){}})();
 window.__dbgErrs=[];
 function showDbg(msg){
@@ -1686,7 +1687,7 @@ window.showAnalysisTab=function(t){
     document.getElementById('answerlog-wrap').classList.toggle('hidden',t!=='log');
     document.getElementById('quest-wrap').classList.toggle('hidden',t!=='quest');
     if(t==='stats')setTimeout(()=>loadAnalysis(),0);
-    if(t==='quest')renderQuestList();
+    if(t==='quest')qMgrRender();
     if(t==='log')loadPlayers();
   }catch(e){showDbg('탭전환 '+(e&&(e.message||e)));alert('탭 전환 오류: '+(e&&e.message||e))}
 };
@@ -1743,241 +1744,186 @@ const q=r.data.q,st=r.data,rte=rate(st);
   });
   wrap.innerHTML=html;
 }
-window.renderQuestList=async function(){
-  const list=document.getElementById('quest-list');
-  list.innerHTML='<div class="loading"><div class="spinner"></div></div><p style="color:#aaa;padding:10px;font-size:.85em;text-align:center">문제 목록 불러오는 중...</p>';
+window.qMgrRender=function(){
+  const list=document.getElementById('qmgr-list');
+  let sig='[]';
   try{
-    await ensureQuestFast(adminQuiz);
-    const search=(document.getElementById('quest-search').value||'').trim();
-  const map=questCache[adminQuiz]||{};
-  let items=[];
-  baseQuestions(adminQuiz).forEach((d,i)=>{
-    const ov=map[String(i)]||{};
-    items.push({q:{...d,...ov,id:String(i)},hidden:!!ov.remove,custom:false});
-  });
-  Object.keys(map).forEach(k=>{
-    const v=map[k];
-    if(v&&v.custom===true)items.push({q:{...v,id:k},hidden:false,custom:true});
-  });
-  let filtered=items;
-  if(search)filtered=items.filter(r=>r.q.q.toLowerCase().includes(search.toLowerCase()));
-  if(filtered.length===0){list.innerHTML='<p style="color:#aaa;padding:20px">문제가 없습니다</p>';return}
-  let html='';
-  filtered.forEach(r=>{
-const q=r.q,isHidden=r.hidden,isCustom=r.custom;
-    const catCls=q.cat==='역사'?'cat-history':q.cat==='과학'?'cat-science':q.cat?'cat-common':'cat-fun';
-    const catLabel=String(q.cat||'');
-    const typeTxt=q.t==='객관식'?'객관식':'주관식';
-    const ans=q.t==='객관식'?q.o[q.a]:q.a.join(', ');
-    html+=`<div class="quest-item ${isHidden?'hidden_q':''}">
-      <div class="qt-left">
-        <div class="qt-q">${isHidden?'<span style="color:#f44336">[숨김]</span> ':''}${esc(q.q)}</div>
-        <div class="qt-meta"><span class="aq-cat ${catCls}">${catLabel}</span> ${typeTxt} ${isCustom?'· 추가문제':''} · 정답: ${esc(ans)}</div>
-      </div>
-      <div class="qt-btns">
-        <button class="qt-btn edit" onclick="openQuestForm('${esc(q.id)}')">편집</button>
-        <button class="qt-btn toggle" onclick="toggleQuestHide('${esc(q.id)}')">${isHidden?'보이기':'숨기기'}</button>
-        ${isCustom?`<button class="qt-btn del" onclick="deleteQuest('${esc(q.id)}')">삭제</button>`:''}
-      </div>
-    </div>`;
-  });
-  list.innerHTML=html+'<p style="color:#777;font-size:.8em;margin-top:12px;text-align:center">총 '+filtered.length+'문제 표시됨</p>';
+    const map=(typeof questCache!=='undefined'&&questCache[adminQuiz])||{};
+    sig=JSON.stringify(map);
+    const search=(document.getElementById('qmgr-search').value||'').trim();
+    let items=[];
+    baseQuestions(adminQuiz).forEach((d,i)=>{
+      const ov=map[String(i)]||{};
+      items.push({q:{...d,...ov,id:String(i)},hidden:!!ov.remove,custom:false});
+    });
+    Object.keys(map).forEach(k=>{
+      const v=map[k];
+      if(v&&v.custom===true)items.push({q:{...v,id:k},hidden:false,custom:true});
+    });
+    let filtered=items;
+    if(search)filtered=items.filter(r=>String(r.q.q||'').toLowerCase().includes(search.toLowerCase()));
+    if(filtered.length===0){list.innerHTML='<p style="color:#aaa;padding:20px">문제가 없습니다</p>';return}
+    let html='';
+    filtered.forEach(r=>{
+      const q=r.q,isHidden=r.hidden,isCustom=r.custom;
+      const catCls=q.cat==='역사'?'cat-history':q.cat==='과학'?'cat-science':q.cat?'cat-common':'cat-fun';
+      const typeTxt=q.t==='객관식'?'객관식':'주관식';
+      const ans=q.t==='객관식'?(q.o?q.o[q.a]:''):(q.a?q.a.join(', '):'');
+      html+=`<div class="quest-item ${isHidden?'hidden_q':''}">
+        <div class="qt-left">
+          <div class="qt-q">${isHidden?'<span style="color:#f44336">[숨김]</span> ':''}${esc(q.q)}</div>
+          <div class="qt-meta"><span class="aq-cat ${catCls}">${esc(String(q.cat||''))}</span> ${typeTxt} ${isCustom?'· 추가문제':''} · 정답: ${esc(String(ans))}</div>
+        </div>
+        <div class="qt-btns">
+          <button class="qt-btn edit" onclick="qMgrOpen('${esc(q.id)}')">편집</button>
+          <button class="qt-btn toggle" onclick="qMgrHide('${esc(q.id)}')">${isHidden?'보이기':'숨기기'}</button>
+          ${isCustom?`<button class="qt-btn del" onclick="qMgrDel('${esc(q.id)}')">삭제</button>`:''}
+        </div>
+      </div>`;
+    });
+    list.innerHTML=html;
   }catch(e){
-    showDbg('문제목록 '+(e&&(e.message||e)));
-    list.innerHTML='<p style="color:#f44336;padding:16px">문제 목록 오류: '+esc(String(e&&e.message||e))+'</p>';
+    list.innerHTML='<p style="color:#f44336;padding:16px">목록 오류: '+esc(String(e&&e.message||e))+'</p>';
   }
+  try{
+    ensureQuestFast(adminQuiz).then(function(){
+      try{
+        const m2=(typeof questCache!=='undefined'&&questCache[adminQuiz])||{};
+        if(JSON.stringify(m2)!==sig&&Object.keys(m2).length)qMgrRender();
+      }catch(e){}
+    }).catch(function(){});
+  }catch(e){}
 };
-function setCatOptions(sel,cur){
+function qMgrCats(cur){
   const base=['상식','재밌는','역사','과학'];
-  const cats=(cur&&base.indexOf(cur)===-1)?[cur].concat(base):base.slice();
+  return (cur&&base.indexOf(cur)===-1)?[cur].concat(base):base.slice();
+}
+window.qMgrFillCat=function(selId,cur){
+  const sel=document.getElementById(selId);
+  const cats=qMgrCats(cur);
   sel.innerHTML=cats.map(c=>'<option>'+esc(c)+'</option>').join('');
   sel.value=(cur&&cats.indexOf(cur)!==-1)?cur:cats[0];
-}
-window.openQuestForm=async function(key){
+};
+window.qMgrType=function(){
+  const t=document.getElementById('qmgr-type').value;
+  document.getElementById('qmgr-obj').classList.toggle('hidden',t!=='객관식');
+  document.getElementById('qmgr-subj').classList.toggle('hidden',t!=='주관식');
+};
+window.qMgrClose=function(){
+  document.getElementById('qmgr-form').classList.add('hidden');
+  document.getElementById('qmgr-list-view').classList.remove('hidden');
+};
+window.qMgrOpen=function(key){
   try{
-    await ensureQuestFast(adminQuiz);
-    const map=questCache[adminQuiz]||{};
-  document.getElementById('quest-list-view').classList.add('hidden');
-  const form=document.getElementById('quest-form');
-  form.classList.remove('hidden');
-  const base=baseQuestions(adminQuiz);
-  const dsc=document.getElementById('qf-desc');
-  if(dsc)dsc.textContent='기본 문제 '+base.length+'개에 추가하거나, 기존 문제를 수정/숨길 수 있습니다';
-  const reset=()=>{
-    document.getElementById('qf-key').value='';
-    document.getElementById('qf-title').textContent='새 문제 추가';
-    document.getElementById('qf-q').value='';
-    setCatOptions(document.getElementById('qf-cat'), base[0]?base[0].cat:'상식');
-    document.getElementById('qf-type').value=base[0]&&base[0].t==='객관식'?'객관식':'주관식';
-    document.getElementById('qf-o1').value='';document.getElementById('qf-o2').value='';
-    document.getElementById('qf-o3').value='';document.getElementById('qf-o4').value='';
-    document.getElementById('qf-a').value='0';
-    document.getElementById('qf-ans').value='';
-    document.getElementById('qf-e').value='';
-    toggleQuestType();
-  };
-  if(key){
-    let q=null;
-    if(/^\d+$/.test(String(key))){const d=base[Number(key)];if(d)q={...d,...(map[String(key)]||{})}}
-    else if(map[String(key)])q=map[String(key)];
-    if(q){
-      document.getElementById('qf-key').value=String(key);
-document.getElementById('qf-title').textContent='문제 편집';
-      document.getElementById('qf-q').value=q.q;
-      setCatOptions(document.getElementById('qf-cat'), q.cat);
-      document.getElementById('qf-type').value=q.t==='객관식'?'객관식':'주관식';
-      if(q.t==='객관식'){
-        document.getElementById('qf-o1').value=q.o[0]||'';document.getElementById('qf-o2').value=q.o[1]||'';
-        document.getElementById('qf-o3').value=q.o[2]||'';document.getElementById('qf-o4').value=q.o[3]||'';
-        document.getElementById('qf-a').value=String(q.a);
-      }else{
-        document.getElementById('qf-ans').value=q.a.join(', ');
-      }
-      document.getElementById('qf-e').value=q.e||'';
-      toggleQuestType();
+    const map=(typeof questCache!=='undefined'&&questCache[adminQuiz])||{};
+    document.getElementById('qmgr-list-view').classList.add('hidden');
+    document.getElementById('qmgr-form').classList.remove('hidden');
+    const base=baseQuestions(adminQuiz);
+    document.getElementById('qmgr-desc').textContent='기본 문제 '+base.length+'개에 추가하거나, 기존 문제를 수정/숨길 수 있습니다';
+    document.getElementById('qmgr-key').value=key?String(key):'';
+    document.getElementById('qmgr-title').textContent=key?'문제 편집':'새 문제 추가';
+    let d=null;
+    if(key){
+      if(/^\d+$/.test(String(key))){const b=base[Number(key)];if(b)d={...b,...(map[String(key)]||{})}}
+      else if(map[String(key)])d=map[String(key)];
     }
-  }else{reset()}
+    ['o1','o2','o3','o4'].forEach(k=>{document.getElementById('qmgr-'+k).value=''});
+    if(d){
+      document.getElementById('qmgr-q').value=d.q||'';
+      qMgrFillCat('qmgr-cat',d.cat);
+      document.getElementById('qmgr-type').value=d.t==='객관식'?'객관식':'주관식';
+      if(d.t==='객관식'&&d.o){
+        document.getElementById('qmgr-o1').value=d.o[0]||'';
+        document.getElementById('qmgr-o2').value=d.o[1]||'';
+        document.getElementById('qmgr-o3').value=d.o[2]||'';
+        document.getElementById('qmgr-o4').value=d.o[3]||'';
+        document.getElementById('qmgr-a').value=String(d.a);
+      }else{
+        document.getElementById('qmgr-a').value='0';
+        document.getElementById('qmgr-ans').value=d.a?(d.a.join?d.a.join(', '):String(d.a)):'';
+      }
+      document.getElementById('qmgr-e').value=d.e||'';
+    }else{
+      document.getElementById('qmgr-q').value='';
+      qMgrFillCat('qmgr-cat',base[0]?base[0].cat:'상식');
+      document.getElementById('qmgr-type').value='주관식';
+      document.getElementById('qmgr-a').value='0';
+      document.getElementById('qmgr-ans').value='';
+      document.getElementById('qmgr-e').value='';
+    }
+    qMgrType();
   }catch(e){
-    showDbg('편집화면 '+(e&&(e.message||e)));
     alert('편집 화면 오류: '+(e&&e.message||e));
-    try{document.getElementById('quest-form').classList.add('hidden');document.getElementById('quest-list-view').classList.remove('hidden')}catch(e2){}
+    try{qMgrClose()}catch(e2){}
   }
 };
-window.toggleQuestType=function(){
-  const t=document.getElementById('qf-type').value;
-  document.getElementById('qf-obj').classList.toggle('hidden',t!=='객관식');
-  document.getElementById('qf-subj').classList.toggle('hidden',t!=='주관식');
-};
-window.closeQuestForm=function(){
-  document.getElementById('quest-form').classList.add('hidden');
-  document.getElementById('quest-list-view').classList.remove('hidden');
-};
-window.saveQuest=async function(){
-const q=document.getElementById('qf-q').value.trim();
-  const cat=document.getElementById('qf-cat').value||'상식';
-  const type=document.getElementById('qf-type').value;
-  const e=document.getElementById('qf-e').value.trim();
-  const key=document.getElementById('qf-key').value;
-  if(!q){alert('문제를 입력해주세요.');return}
-  let obj;
-  const isDefault=/^\d+$/.test(key);
-  if(type==='객관식'){
-    const o=[1,2,3,4].map(i=>document.getElementById('qf-o'+i).value.trim());
-    if(o.some(x=>!x)){alert('보기 4개를 모두 입력해주세요.');return}
-    const a=parseInt(document.getElementById('qf-a').value,10);
-    obj={q,cat,t:'객관식',o,a,e,custom:!isDefault};
-  }else{
-    const ans=document.getElementById('qf-ans').value.trim();
-    if(!ans){alert('정답을 입력해주세요.');return}
-    obj={q,cat,t:'주관식',a:ans.split(',').map(s=>s.trim()).filter(Boolean),e,custom:!isDefault};
-  }
-try{
+window.qMgrSave=function(){
+  try{
+    const q=document.getElementById('qmgr-q').value.trim();
+    const cat=document.getElementById('qmgr-cat').value||'상식';
+    const type=document.getElementById('qmgr-type').value;
+    const ex=document.getElementById('qmgr-e').value.trim();
+    const key=document.getElementById('qmgr-key').value;
+    if(!q){alert('문제를 입력해주세요.');return}
+    let obj;
+    const isDefault=/^\d+$/.test(key);
+    if(type==='객관식'){
+      const o=[1,2,3,4].map(i=>document.getElementById('qmgr-o'+i).value.trim());
+      if(o.some(x=>!x)){alert('보기 4개를 모두 입력해주세요.');return}
+      const a=parseInt(document.getElementById('qmgr-a').value,10)||0;
+      obj={q,cat,t:'객관식',o,a,e:ex,custom:!isDefault};
+    }else{
+      const ans=document.getElementById('qmgr-ans').value.trim();
+      if(!ans){alert('정답을 입력해주세요.');return}
+      obj={q,cat,t:'주관식',a:ans.split(',').map(s=>s.trim()).filter(Boolean),e:ex,custom:!isDefault};
+    }
     const dest=key||fsNewId('quest');
     fsSet('quest',adminQuiz+'_'+dest,{quiz:adminQuiz,key:dest,data:obj});
     questCache[adminQuiz]=null;
-    await ensureQuestFast(adminQuiz);
-    closeQuestForm();
-    renderQuestList();
-  }catch(err){alert('저장 실패: '+err.message)}
+    qMgrClose();
+    qMgrRender();
+    ensureQuestFast(adminQuiz).then(function(){qMgrRender()}).catch(function(){});
+  }catch(err){alert('저장 실패: '+(err&&err.message||err))}
 };
-window.toggleQuestHide=async function(key){
+window.qMgrHide=function(key){
   try{
-    const map=questCache[adminQuiz]||{};
-    const isHiddenNow=!!map[String(key)]&&map[String(key)].remove;
+    const map=(typeof questCache!=='undefined'&&questCache[adminQuiz])||{};
+    const isHiddenNow=!!map[String(key)]&&!!map[String(key)].remove;
     if(isHiddenNow){fsDel('quest',adminQuiz+'_'+key)}
     else{fsSet('quest',adminQuiz+'_'+key,{quiz:adminQuiz,key:key,data:{remove:true}})}
     questCache[adminQuiz]=null;
-    await ensureQuestFast(adminQuiz);
-    renderQuestList();
-  }catch(err){alert('실패: '+err.message)}
+    qMgrRender();
+    ensureQuestFast(adminQuiz).then(function(){qMgrRender()}).catch(function(){});
+  }catch(err){alert('실패: '+(err&&err.message||err))}
 };
-window.deleteQuest=async function(key){
-  if(!confirm('이 문제를 삭제할까요? (통계는 남아있습니다)'))return;
+window.qMgrDel=function(key){
+  if(!confirm('이 문제를 삭제할까요?'))return;
   try{
     fsDel('quest',adminQuiz+'_'+key);
     questCache[adminQuiz]=null;
-    await ensureQuestFast(adminQuiz);
-    renderQuestList();
-  }catch(err){alert('삭제 실패: '+err.message)}
+    qMgrRender();
+    ensureQuestFast(adminQuiz).then(function(){qMgrRender()}).catch(function(){});
+  }catch(err){alert('삭제 실패: '+(err&&err.message||err))}
 };
 init();
 </script>
 <script>
 (function(){
-  function esc2(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
   function refresh(){
     try{
-      var box=document.getElementById('admin-diag');
+      var box=document.getElementById('diag-global');
       if(!box)return;
-      var fns=['showAnalysis','showAnalysisTab','renderQuestList','openQuestForm','saveQuest'];
-      var okCount=0;
-      var st=fns.map(function(f){var ok=(typeof window[f]==='function');if(ok)okCount++;return ok?(f+'O'):(f+'X')}).join(' ');
-      var fsOk='?';
-      try{fsOk=(typeof fs!=='undefined'&&fs)?'O':'X'}catch(e){fsOk='X'}
-      var errs=(window.__dbgErrs||[]).slice(-3).join(' | ');
-      var ua='';
-      try{ua=(navigator.userAgent||'').replace(/\s+/g,' ').slice(0,70)}catch(e){ua='?'}
-      box.innerHTML='<b style="color:#fff">진단창 (그대로 읽어서 알려주세요)</b><br>함수 '+okCount+'/5 · FS '+fsOk+' · '+esc2(ua)+(errs?'<br>오류: '+esc2(errs):'')+'<br>'+esc2(st)+'<br><button id="diag-direct" style="margin-top:6px;padding:9px 16px;border:none;border-radius:8px;background:#f44336;color:#fff;font-weight:700;cursor:pointer;font-size:.95em">비상용 문제관리 열기</button>';
-      var btn=document.getElementById('diag-direct');
-      if(btn&&!btn.dataset.bound){btn.dataset.bound='1';btn.addEventListener('click',directEditor)}
+      var fns=['showAnalysis','showAnalysisTab','qMgrRender','qMgrOpen','qMgrSave','startQuiz'];
+      var bad=[];
+      fns.forEach(function(f){if(typeof window[f]!=='function')bad.push(f+' 없음')});
+      try{if(!(typeof fs!=='undefined'&&fs))bad.push('FS없음')}catch(e){bad.push('FS없음')}
+      var errs=(window.__dbgErrs||[]).slice(-2).join(' | ');
+      if(!bad.length&&!errs){box.style.display='none';return}
+      var ua='';try{ua=(navigator.userAgent||'').replace(/\s+/g,' ').slice(0,60)}catch(e){}
+      box.style.display='block';
+      box.textContent='진단: '+(bad.join(' · ')||'')+(errs?' | '+errs:'')+' | '+ua;
     }catch(e){}
   }
-  function restSave(quiz,key,obj,cb){
-    try{
-      var url='https://firestore.googleapis.com/v1/projects/quiz-ranking-6cb9f/databases/(default)/documents/quest/'+quiz+'_'+key+'?key=AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k';
-      fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{
-        quiz:{stringValue:quiz},key:{stringValue:String(key)},
-        data:{mapValue:{fields:{
-          q:{stringValue:String(obj.q||'')},cat:{stringValue:String(obj.cat||'')},t:{stringValue:obj.t||'주관식'},
-          a:{arrayValue:{values:(obj.a||[]).map(function(x){return {stringValue:String(x)}})}},
-          e:{stringValue:String(obj.e||'')},custom:{booleanValue:!!obj.custom}
-        }}}
-      }})}).then(function(r){cb(r.ok)}).catch(function(){cb(false)});
-    }catch(e){cb(false)}
-  }
-  function directEditor(){
-    try{
-      var quiz=prompt('어떤 퀴즈?\n1 = 상식 (96문제)\n2 = 아재개그 (65문제)','1');
-      if(quiz===null)return;
-      quiz=(String(quiz).indexOf('2')===0)?'ajaeggae':'common';
-      var pool=null;
-      try{pool=getQuestionPool(quiz)}catch(e){pool=null}
-      if(!pool||!pool.length){
-        try{pool=(quiz==='common')?allQuestions.slice():ajaeggaeQuestions.slice()}catch(e){pool=[]}
-      }
-      if(!pool.length){alert('문제 배열을 못 찾았어요. 진단창 내용을 알려주세요.');return}
-      var list='';
-      pool.forEach(function(q,i){
-        var ans=(q.t==='객관식'&&q.o)?q.o[q.a]:(q.a?q.a.join(','):'');
-        list+=i+'. '+String(q.q).slice(0,34)+' ['+String(ans).slice(0,18)+']\n';
-      });
-      var pick=prompt('수정할 문제 번호 입력:\n'+list.slice(0,1700),'');
-      if(pick===null)return;
-      var n=parseInt(pick,10);
-      if(isNaN(n)||n<0||n>=pool.length){alert('번호가 이상해요');return}
-      var q=pool[n];
-      var cur=(q.t==='객관식'&&q.o)?q.o[q.a]:(q.a?q.a.join(','):'');
-      var ans=prompt('문제 #'+n+'\n'+String(q.q).slice(0,80)+'\n\n새 정답 입력 (여러 개는 쉼표로):',cur);
-      if(ans===null||!ans.trim())return;
-      var arr=ans.split(',').map(function(s){return s.trim()}).filter(Boolean);
-      if(!arr.length){alert('정답이 비었어요');return}
-      var obj={q:q.q,cat:q.cat,t:q.t,e:q.e||'',custom:false,a:arr};
-      var done=false;
-      try{
-        if(typeof fsSet==='function'&&(typeof fs!=='undefined'&&fs)){
-          fsSet('quest',quiz+'_'+n,{quiz:quiz,key:String(n),data:obj});
-          done=true;
-        }
-      }catch(e){}
-      if(done){
-        try{questCache[quiz]=null}catch(e){}
-        alert('저장 완료! (원래 문제관리 화면을 껐다 켜면 반영돼요)');
-      }else{
-        restSave(quiz,n,obj,function(ok){alert(ok?'저장 완료! (비상 경로)':'저장 실패... 진단창 내용을 알려주세요')});
-      }
-    }catch(e){alert('비상 편집 오류: '+e.message)}
-  }
-  window.addEventListener('error',function(e){try{var d=document.getElementById('admin-diag');if(d)d.style.borderColor='#fff'}catch(_){}});
   refresh();
   setInterval(refresh,2000);
 })();
