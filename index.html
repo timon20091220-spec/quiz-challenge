@@ -407,6 +407,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
           </label>
         </div>
         <div id="analysis-wrap"><div class="loading"><div class="spinner"></div></div></div>
+        <div id="analysis-detail" class="hidden"></div>
         <div id="answerlog-wrap" class="hidden" style="text-align:left">
           <div id="anslog-players">
             <p style="color:#aaa;margin-bottom:15px;font-size:.9em">현재 랭크에 등록된 플레이어를 클릭하면 그 사람이 푼 문제와 답을 확인합니다</p>
@@ -511,7 +512,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-const APP_VER='v15';
+const APP_VER='v16';
 (function(){try{var m=(location.search||'').match(/[?&]v=([^&]*)/);if(!m||decodeURIComponent(m[1])!==APP_VER)location.replace(location.pathname+'?v='+APP_VER)}catch(e){}})();
 window.__dbgErrs=[];
 function showDbg(msg){
@@ -646,9 +647,9 @@ function fsDel(col,docId){
 }
 function fsInc(col,docId,obj){
   if(!fsReady)return Promise.resolve();
-  const inc=firebase.firestore.FieldValue.increment(1);
+  const inc=firebase.firestore.FieldValue.increment;
   const data={};
-  Object.keys(obj).forEach(k=>data[k]=inc);
+  Object.keys(obj).forEach(k=>data[k]=inc(obj[k]||0));
   return fs.collection(col).doc(docId).set(data,{merge:true}).catch(()=>{});
 }
 function fsParseValue(v){
@@ -1763,6 +1764,7 @@ window.showAnalysisTab=function(t){
     document.getElementById('tab-quest').classList.toggle('tab-active',t==='quest');
     document.getElementById('analysis-controls').classList.toggle('hidden',t!=='stats');
     document.getElementById('analysis-wrap').classList.toggle('hidden',t!=='stats');
+    if(t!=='stats')document.getElementById('analysis-detail').classList.add('hidden');
     document.getElementById('answerlog-wrap').classList.toggle('hidden',t!=='log');
     document.getElementById('quest-wrap').classList.toggle('hidden',t!=='quest');
     if(t==='stats')setTimeout(()=>loadAnalysis(),0);
@@ -1780,13 +1782,62 @@ const rows=(await withTimeout(fsGetAll('qstats'),4000).catch(()=>null))||[];
     const stats={};
     const pre=adminQuiz+'_';
     rows.forEach(d=>{if(d.id&&d.id.indexOf(pre)===0)stats[d.id.slice(pre.length)]={tries:d.tries||0,wrong:d.wrong||0}});
-analysisStats=getQuestionPool(adminQuiz).map(q=>{
+    analysisStats=getQuestionPool(adminQuiz).map(q=>{
       const s=stats[statKey(q.q,q.cat)]||{tries:0,wrong:0};
       return {q:q,tries:s.tries||0,wrong:s.wrong||0};
     });
+    window.__wrongMap=null;
+    loadWrongMap();
     renderAnalysis();
   }catch(e){wrap.innerHTML='<p style="color:#aaa;padding:20px">통계 불러오기 실패</p>'}
 }
+window.loadWrongMap=async function(){
+  try{
+    let rows=await withTimeout(fsGetAll('players'),3500).catch(()=>undefined);
+    if(rows===undefined)rows=await fsRestList('players');
+    const map={};
+    (rows||[]).forEach(doc=>{
+      const att=(doc&&doc.attempts)||[];
+      att.forEach(a=>{
+        if(!a||a.quiz!==adminQuiz||a.correct)return;
+        const k=statKey(a.q,a.cat);
+        if(!map[k])map[k]=[];
+        map[k].push({n:a.nickname||'?',x:a.userAns||'(무응답)',d:a.date||0});
+      });
+    });
+    window.__wrongMap=map;
+  }catch(e){window.__wrongMap={}}
+};
+window.showQWrong=function(idx){
+  try{
+    const st=analysisStats&&analysisStats[idx];
+    if(!st)return;
+    const q=st.q;
+    const ans=q.t==='객관식'?(q.o?q.o[q.a]:''):(q.a?q.a.join(', '):'');
+    const det=document.getElementById('analysis-detail');
+    const wrap=document.getElementById('analysis-wrap');
+    let listHtml='';
+    const map=window.__wrongMap;
+    if(!map){listHtml='<p style="color:#aaa;padding:14px">오답 목록 불러오는 중...</p>'}
+    else{
+      const list=(map[statKey(q.q,q.cat)]||[]).slice().sort((a,b)=>(b.d||0)-(a.d||0));
+      if(!list.length)listHtml='<p style="color:#4caf50;font-weight:700;padding:14px">저장된 오답이 없습니다</p>';
+      else listHtml=list.map(r=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:9px 4px;border-bottom:1px solid rgba(255,255,255,.07);font-size:.92em"><b style="color:#ffd200;flex-shrink:0">${esc(String(r.n))}</b><span style="text-align:right;word-break:break-all">${esc(String(r.x))}</span></div>`).join('');
+    }
+    det.innerHTML=`<button class="btn btn-secondary" style="padding:8px 18px;font-size:.85em;margin:0 0 10px" onclick="backToAnalysis()">← 오답률 목록</button>
+      <div style="text-align:left;border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:14px">
+        <div style="font-weight:700;margin-bottom:6px">${esc(q.q)}</div>
+        <div style="color:#aaa;font-size:.85em;margin-bottom:10px">정답: ${esc(String(ans))} · 오답 ${st.wrong}/${st.tries}회</div>
+        ${listHtml}
+      </div>`;
+    wrap.classList.add('hidden');
+    det.classList.remove('hidden');
+  }catch(e){showDbg('오답상세 '+(e&&(e.message||e)))}
+};
+window.backToAnalysis=function(){
+  document.getElementById('analysis-detail').classList.add('hidden');
+  document.getElementById('analysis-wrap').classList.remove('hidden');
+};
 window.renderAnalysis=function(){
   const wrap=document.getElementById('analysis-wrap');
   if(!analysisStats){wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';return}
@@ -1808,7 +1859,7 @@ const q=r.data.q,st=r.data,rte=rate(st);
     const catLabel=String(q.cat||'');
     const bar=st.tries>0?Math.round((st.wrong/st.tries)*100):0;
     const ans=q.t==='객관식'?q.o[q.a]:q.a[0];
-    html+=`<div class="analysis-item">
+    html+=`<div class="analysis-item" style="cursor:pointer" onclick="showQWrong(${r.idx})">
       <div class="analysis-no">${r.idx+1}</div>
       <div class="analysis-q">
         <span class="aq-cat ${catCls}">${catLabel}</span><span class="aq-text">${esc(q.q)}</span>
@@ -1821,7 +1872,7 @@ const q=r.data.q,st=r.data,rte=rate(st);
       </div>
     </div>`;
   });
-  wrap.innerHTML=html;
+  wrap.innerHTML=html+'<p style="color:#777;font-size:.78em;margin-top:10px;text-align:center">문제를 누르면 그 문제의 오답 답안을 볼 수 있어요</p>';
 }
 window.qMgrRender=function(){
   const list=document.getElementById('qmgr-list');
