@@ -77,6 +77,21 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .review-item .rq{font-weight:600;color:#fff;margin-bottom:4px}
 .review-item .ra{color:#4caf50;font-weight:600}
 .review-item .re{color:#aaa;font-size:.85em;margin-top:4px;line-height:1.5}
+.analysis-select{padding:10px 14px;border:2px solid #444;border-radius:10px;background:#1a1a2e;color:#fff;font-size:.9em;outline:none}
+.analysis-select:focus{border-color:#ffd200}
+.analysis-item{display:grid;grid-template-columns:44px 1fr 90px;gap:10px;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.07);text-align:left}
+.analysis-item:last-child{border-bottom:none}
+.analysis-no{font-size:1.1em;font-weight:700;color:#ffd200;text-align:center}
+.analysis-q{line-height:1.5;font-size:.93em}
+.analysis-q .aq-cat{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.7em;font-weight:600;margin-right:6px;vertical-align:middle}
+.analysis-q .aq-text{vertical-align:middle}
+.analysis-q .aq-ans{display:block;color:#4caf50;font-weight:600;font-size:.85em;margin-top:3px}
+.analysis-stat{text-align:right}
+.analysis-stat .as-num{font-size:1.25em;font-weight:800;color:#f44336}
+.analysis-stat .as-sub{font-size:.75em;color:#aaa}
+.analysis-bar{height:6px;background:#333;border-radius:3px;margin-top:6px;overflow:hidden}
+.analysis-bar>div{height:100%;background:linear-gradient(90deg,#f44336,#ff9800);border-radius:3px}
+.chk{width:42px;height:26px;display:inline-flex;align-items:center;cursor:pointer}
 @media(max-width:500px){.logo{font-size:2em}.question-text{font-size:1.05em}.score-details{grid-template-columns:1fr}.quiz-header{flex-direction:column;align-items:flex-start}.option-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -92,6 +107,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
     <div style="margin-top:20px">
       <button class="btn btn-primary" onclick="startQuiz()">퀴즈 시작</button>
       <button class="btn btn-secondary" onclick="showRankingOnly()">랭킹 보기</button>
+      <button class="btn btn-secondary" onclick="showAnalysis()">문항 분석</button>
     </div>
   </div>
   <div id="screen-quiz" class="screen hidden">
@@ -141,6 +157,30 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
       <h2 style="margin-bottom:5px">전체 랭킹</h2>
       <p style="color:#aaa;margin-bottom:20px;font-size:.9em">상위 50명</p>
       <div id="ranking-standalone-wrap"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+    <div style="text-align:center;margin-top:15px">
+      <button class="btn btn-secondary" onclick="goStart()">돌아가기</button>
+    </div>
+  </div>
+  <div id="screen-analysis" class="screen hidden">
+    <div class="ranking-card">
+      <h2 style="margin-bottom:5px">문항 오답률 분석</h2>
+      <p style="color:#aaa;margin-bottom:15px;font-size:.9em">누적된 시도 기준 문제별 오답 통계</p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:15px;justify-content:center;align-items:center">
+        <select id="analysis-sort" class="analysis-select" onchange="renderAnalysis()">
+          <option value="rate">오답률 높은 순</option>
+          <option value="tries">시도 많은 순</option>
+          <option value="wrong">오답 많은 순</option>
+          <option value="number">문항 번호 순</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:6px;font-size:.9em;color:#ccc">
+          <input type="checkbox" id="analysis-only-wrong" onchange="renderAnalysis()"> 오답 있는 문제만
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:.9em;color:#ccc">
+          <input type="checkbox" id="analysis-show-answer" onchange="renderAnalysis()"> 정답 표시
+        </label>
+      </div>
+      <div id="analysis-wrap"><div class="loading"><div class="spinner"></div></div></div>
     </div>
     <div style="text-align:center;margin-top:15px">
       <button class="btn btn-secondary" onclick="goStart()">돌아가기</button>
@@ -301,9 +341,9 @@ const allQuestions=[
 {q:"이순신 장군이 사용한 해전 전술 이름은?",a:["학익진"],cat:"재밌는",e:"학익진은 학이 날개를 편 형태의 전법으로, 양날개로 적을 포위하여 공격하는 해전 전술입니다. 한산도대첩에서 결정적으로 사용되었습니다."}
 ];
 
-let currentQuiz=[],currentIdx=0,score=0,answered=false,startTime,timerInterval,timeLeft=1800,nickname='',selectedOption=-1,qTimerInterval=null;
+let currentQuiz=[],currentIdx=0,score=0,answered=false,startTime,timerInterval,timeLeft=1800,nickname='',selectedOption=-1,qTimerInterval=null,attemptLog=[],analysisStats=null;
 
-function init(){showScreen('screen-start')}
+function init(){allQuestions.forEach((q,i)=>q.id=i);showScreen('screen-start')}
 window.goStart=function(){showScreen('screen-start')};
 window.showScreen=function(id){document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));document.getElementById(id).classList.remove('hidden')};
 window.showRankingOnly=function(){showScreen('screen-ranking');loadRanking('ranking-standalone-wrap',null)};
@@ -318,7 +358,7 @@ window.startQuiz=function(){
   Object.values(cats).forEach(a=>{currentQuiz.push(...a.slice(0,Math.ceil(32/3)))});
   currentQuiz=currentQuiz.slice(0,32);
   shuffle(currentQuiz);
-  currentIdx=0;score=0;answered=false;selectedOption=-1;timeLeft=1800;startTime=Date.now();clearInterval(qTimerInterval);
+  currentIdx=0;score=0;answered=false;selectedOption=-1;timeLeft=1800;startTime=Date.now();clearInterval(qTimerInterval);attemptLog=[];
   showScreen('screen-quiz');renderQuestion();startTimer();
 };
 
@@ -351,7 +391,7 @@ function startQTimer(){
 function handleTimeout(){
   if(answered)return;
   const q=currentQuiz[currentIdx],isObj=q.t==='객관식';
-  answered=true;q.userWrong=true;score=score;
+  answered=true;q.userWrong=true;score=score;attemptLog.push({id:q.id,wrong:true});
   document.getElementById('answer-result').textContent='시간초과!';
   document.getElementById('answer-result').className='answer-result is-wrong';
   if(!isObj){const input=document.getElementById('answer-input');input.disabled=true}
@@ -403,6 +443,7 @@ window.submitAnswer=function(){
   if(answered)return;
   clearInterval(qTimerInterval);
   const q=currentQuiz[currentIdx],isObj=q.t==='객관식';
+  const logAttempt=wrong=>attemptLog.push({id:q.id,wrong});
   if(isObj){
     if(selectedOption===-1){alert('보기를 선택해주세요.');return}
     answered=true;
@@ -413,12 +454,13 @@ window.submitAnswer=function(){
       document.getElementById('answer-result').textContent='정답!';
       document.getElementById('answer-result').className='answer-result is-correct';
       score++;
+      logAttempt(false);
     }else{
       btns[selectedOption].classList.add('wrong');
       btns[q.a].classList.add('correct');
       document.getElementById('answer-result').textContent='오답!';
       document.getElementById('answer-result').className='answer-result is-wrong';
-      q.userWrong=true;
+      q.userWrong=true;logAttempt(true);
     }
   }else{
     const input=document.getElementById('answer-input'),userAns=input.value.trim();
@@ -428,12 +470,12 @@ window.submitAnswer=function(){
       input.classList.add('correct');
       document.getElementById('answer-result').textContent='정답!';
       document.getElementById('answer-result').className='answer-result is-correct';
-      score++;
+      score++;logAttempt(false);
     }else{
       input.classList.add('wrong');
       document.getElementById('answer-result').textContent='오답!';
       document.getElementById('answer-result').className='answer-result is-wrong';
-      q.userWrong=true;
+      q.userWrong=true;logAttempt(true);
     }
     input.disabled=true;
   }
@@ -481,6 +523,17 @@ async function finishQuiz(){
         db.ref('rankings').push({nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
       }
     }catch(e){console.warn('랭킹 저장 실패:',e)}
+    try{
+      const stRef=db.ref('qstats');
+      for(const a of attemptLog){
+        await stRef.child(String(a.id)).transaction(s=>{
+          s=s||{tries:0,wrong:0};
+          s.tries++;
+          if(a.wrong)s.wrong++;
+          return s;
+        });
+      }
+    }catch(e){console.warn('문항 통계 저장 실패:',e)}
   }
   setTimeout(()=>loadRanking('ranking-result-wrap',pct),500);
 }
@@ -505,6 +558,61 @@ async function loadRanking(containerId,myScore){
 }
 
 function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+
+window.showAnalysis=function(){
+  showScreen('screen-analysis');
+  loadAnalysis();
+};
+async function loadAnalysis(){
+  const wrap=document.getElementById('analysis-wrap');
+  wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
+  try{
+    const snap=await db.ref('qstats').once('value');
+    const stats={};
+    snap.forEach(c=>{stats[c.key]=c.val()});
+    analysisStats=allQuestions.map(q=>{
+      const s=stats[q.id]||{tries:0,wrong:0};
+      return {q:q,tries:s.tries||0,wrong:s.wrong||0};
+    });
+    renderAnalysis();
+  }catch(e){wrap.innerHTML='<p style="color:#aaa;padding:20px">통계 불러오기 실패</p>'}
+}
+window.renderAnalysis=function(){
+  const wrap=document.getElementById('analysis-wrap');
+  if(!analysisStats){wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';return}
+  const sort=document.getElementById('analysis-sort').value;
+  const onlyWrong=document.getElementById('analysis-only-wrong').checked;
+  const showAns=document.getElementById('analysis-show-answer').checked;
+  let rows=analysisStats.map((r,i)=>({idx:i,data:r}));
+  if(onlyWrong)rows=rows.filter(r=>r.data.wrong>0);
+  const rate=r=>r.tries>0?Math.round((r.wrong/r.tries)*100):null;
+  if(sort==='rate')rows.sort((a,b)=>{const ra=rate(a.data),rb=rate(b.data);return (rb===null?0:rb)-(ra===null?0:ra)||(b.data.tries-a.data.tries)});
+  else if(sort==='tries')rows.sort((a,b)=>(b.data.tries-a.data.tries));
+  else if(sort==='wrong')rows.sort((a,b)=>(b.data.wrong-a.data.wrong));
+  else rows.sort((a,b)=>(a.idx-b.idx));
+  if(rows.length===0){wrap.innerHTML='<p style="color:#aaa;padding:20px">조건에 맞는 데이터가 없습니다</p>';return}
+  let html='';
+  rows.forEach(r=>{
+    const q=r.data.q,st=r.data,rte=rate(st);
+    const catCls=q.cat==='역사'?'cat-history':q.cat==='과학'?'cat-science':'cat-fun';
+    const bar=st.tries>0?Math.round((st.wrong/st.tries)*100):0;
+    const ans=q.t==='객관식'?q.o[q.a]:q.a[0];
+    html+=`<div class="analysis-item">
+      <div class="analysis-no">${r.idx+1}</div>
+      <div class="analysis-q">
+        <span class="aq-cat ${catCls}">${q.cat}</span><span class="aq-text">${esc(q.q)}</span>
+        ${showAns?`<span class="aq-ans">정답: ${esc(ans)}</span>`:''}
+      </div>
+      <div class="analysis-stat">
+        <div class="as-num">${rte===null?'-':rte+'%'}</div>
+        <div class="as-sub">오답 ${st.wrong} / ${st.tries}회</div>
+        <div class="analysis-bar"><div style="width:${bar}%"></div></div>
+      </div>
+    </div>`;
+  });
+  wrap.innerHTML=html;
+}
 init();
 </script>
 </body>
