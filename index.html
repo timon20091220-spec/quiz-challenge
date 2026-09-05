@@ -381,7 +381,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
   <div id="screen-analysis" class="screen hidden">
     <div class="ranking-card">
       <h2 style="margin-bottom:5px">관리자 전용</h2>
-      <p style="color:#aaa;margin-bottom:15px;font-size:.9em">문항 오답률 · 답안 기록 분석</p>
+      <p style="color:#aaa;margin-bottom:15px;font-size:.9em">문항 오답률 · 답안 기록 분석 · <span id="app-version" style="color:#777"></span></p>
       <div id="analysis-content" class="hidden">
         <div style="text-align:center;margin-bottom:16px">
           <select id="admin-qsel" class="analysis-select" onchange="adminQuizChanged()"></select>
@@ -509,6 +509,8 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
+const APP_VER='v8';
+(function(){try{var m=(location.search||'').match(/[?&]v=([^&]*)/);if(!m||decodeURIComponent(m[1])!==APP_VER)location.replace(location.pathname+'?v='+APP_VER)}catch(e){}})();
 const firebaseConfig={apiKey:"AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k",authDomain:"quiz-ranking-6cb9f.firebaseapp.com",projectId:"quiz-ranking-6cb9f",storageBucket:"quiz-ranking-6cb9f.firebasestorage.app",messagingSenderId:"488270918333",appId:"1:488270918333:web:93f4612335b58780b43dd4"};
 const ADMIN_PW='triuytje123!';
 let fs,fsReady=false,firebaseReady=false;try{firebase.initializeApp(firebaseConfig);try{fs=firebase.firestore();fsReady=true}catch(e){console.warn("파이어스토어 연결 실패:",e)}firebaseReady=true}catch(e){console.warn("파이어베이스 연결 실패:",e)}
@@ -765,6 +767,11 @@ async function ensureQuest(qid){
     questCache[qid]=map;
   }catch(e){questCache[qid]={}}
   return questCache[qid];
+}
+function withTimeout(p,ms){return Promise.race([p,new Promise(r=>setTimeout(r,ms))])}
+async function ensureQuestFast(qid){
+  await withTimeout(ensureQuest(qid),3000);
+  return questCache[qid]||{};
 }
 function getQuestionPool(qid){
   const map=questCache[qid]||{};
@@ -1229,7 +1236,7 @@ window.startQuiz=async function(qid){
   qid=qid||curQuizId;
   curQuizId=qid;
   if(!nickname){alert('닉네임 설정 후 퀴즈를 시작할 수 있습니다.');showScreen('screen-nickname');return}
-  await ensureQuest(qid);
+  await ensureQuestFast(qid);
   const pool=getQuestionPool(qid);
   if(pool.length===0){alert('이 퀴즈에 문제가 없습니다.');return}
   if(qid==='common'){
@@ -1606,6 +1613,7 @@ let adminTab='stats';
 window.showAnalysis=function(){
   if(!authUser){alert('관리자 계정으로 로그인하세요.');return}
   if(!isAdmin){alert('관리자 계정이 아닙니다.');return}
+  const av=document.getElementById('app-version');if(av)av.textContent='앱 버전 '+APP_VER;
   document.getElementById('analysis-content').classList.remove('hidden');
   showScreen('screen-analysis');
   initAdminQuizUI();
@@ -1661,8 +1669,8 @@ async function loadAnalysis(){
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-    await ensureQuest(adminQuiz);
-const rows=await fsGetAll('qstats');
+    await ensureQuestFast(adminQuiz);
+const rows=(await withTimeout(fsGetAll('qstats'),4000).catch(()=>null))||[];
     const stats={};
     const pre=adminQuiz+'_';
     rows.forEach(d=>{if(d.id&&d.id.indexOf(pre)===0)stats[d.id.slice(pre.length)]={tries:d.tries||0,wrong:d.wrong||0}});
@@ -1710,7 +1718,7 @@ const q=r.data.q,st=r.data,rte=rate(st);
   wrap.innerHTML=html;
 }
 window.renderQuestList=async function(){
-  await ensureQuest(adminQuiz);
+  await ensureQuestFast(adminQuiz);
   const list=document.getElementById('quest-list');
   const search=(document.getElementById('quest-search').value||'').trim();
   const map=questCache[adminQuiz]||{};
@@ -1754,7 +1762,7 @@ function setCatOptions(sel,cur){
   sel.value=(cur&&cats.indexOf(cur)!==-1)?cur:cats[0];
 }
 window.openQuestForm=async function(key){
-  await ensureQuest(adminQuiz);
+  await ensureQuestFast(adminQuiz);
   const map=questCache[adminQuiz]||{};
   document.getElementById('quest-list-view').classList.add('hidden');
   const form=document.getElementById('quest-form');
@@ -1829,7 +1837,7 @@ try{
     const dest=key||fsNewId('quest');
     fsSet('quest',adminQuiz+'_'+dest,{quiz:adminQuiz,key:dest,data:obj});
     questCache[adminQuiz]=null;
-    await ensureQuest(adminQuiz);
+    await ensureQuestFast(adminQuiz);
     closeQuestForm();
     renderQuestList();
   }catch(err){alert('저장 실패: '+err.message)}
@@ -1841,7 +1849,7 @@ window.toggleQuestHide=async function(key){
     if(isHiddenNow){fsDel('quest',adminQuiz+'_'+key)}
     else{fsSet('quest',adminQuiz+'_'+key,{quiz:adminQuiz,key:key,data:{remove:true}})}
     questCache[adminQuiz]=null;
-    await ensureQuest(adminQuiz);
+    await ensureQuestFast(adminQuiz);
     renderQuestList();
   }catch(err){alert('실패: '+err.message)}
 };
@@ -1850,7 +1858,7 @@ window.deleteQuest=async function(key){
   try{
     fsDel('quest',adminQuiz+'_'+key);
     questCache[adminQuiz]=null;
-    await ensureQuest(adminQuiz);
+    await ensureQuestFast(adminQuiz);
     renderQuestList();
   }catch(err){alert('삭제 실패: '+err.message)}
 };
