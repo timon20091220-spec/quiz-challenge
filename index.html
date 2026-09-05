@@ -495,11 +495,10 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
-const firebaseConfig={apiKey:"AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k",authDomain:"quiz-ranking-6cb9f.firebaseapp.com",databaseURL:"https://quiz-ranking-6cb9f-default-rtdb.firebaseio.com",projectId:"quiz-ranking-6cb9f",storageBucket:"quiz-ranking-6cb9f.firebasestorage.app",messagingSenderId:"488270918333",appId:"1:488270918333:web:93f4612335b58780b43dd4"};
+const firebaseConfig={apiKey:"AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k",authDomain:"quiz-ranking-6cb9f.firebaseapp.com",projectId:"quiz-ranking-6cb9f",storageBucket:"quiz-ranking-6cb9f.firebasestorage.app",messagingSenderId:"488270918333",appId:"1:488270918333:web:93f4612335b58780b43dd4"};
 const ADMIN_PW='triuytje123!';
-let db,fs,fsReady=false,firebaseReady=false;try{firebase.initializeApp(firebaseConfig);db=firebase.database();try{fs=firebase.firestore();fsReady=true}catch(e){console.warn("파이어스토어 연결 실패:",e)}firebaseReady=true}catch(e){console.warn("파이어베이스 연결 실패:",e)}
+let fs,fsReady=false,firebaseReady=false;try{firebase.initializeApp(firebaseConfig);try{fs=firebase.firestore();fsReady=true}catch(e){console.warn("파이어스토어 연결 실패:",e)}firebaseReady=true}catch(e){console.warn("파이어베이스 연결 실패:",e)}
 
 const ADMIN_EMAIL='timon20091220@gmail.com';
 const QUIZ_LIST=[
@@ -572,10 +571,22 @@ const historyQuestions=[
 
 let curQuizId='common',adminQuiz='common',authUser=null,isAdmin=false,questCache={},emailMode='login';
 
-async function restJson(path){
-  const resp=await fetch('https://quiz-ranking-6cb9f-default-rtdb.firebaseio.com'+path+'.json');
-  if(!resp.ok)throw new Error('HTTP '+resp.status);
-  return resp.json();
+function fsGetDoc(col,id){
+  if(!fsReady)return Promise.resolve(null);
+  return fs.collection(col).doc(id).get().then(s=>s.exists?s.data():null).catch(()=>null);
+}
+async function fsGetAll(col){
+  if(!fsReady)return [];
+  const s=await fs.collection(col).get().catch(()=>null);
+  return s?s.docs.map(d=>({id:d.id,...d.data()})):[];
+}
+function fsGetWhere(col,field,val){
+  if(!fsReady)return Promise.resolve([]);
+  return fs.collection(col).where(field,'==',val).get().then(s=>s.docs.map(d=>d.data())).catch(()=>[]);
+}
+function fsNewId(col){
+  if(!fsReady)return 'q'+Date.now().toString(36);
+  return fs.collection(col).doc().id;
 }
 
 function fsAdd(col,obj){
@@ -689,11 +700,8 @@ function baseQuestions(qid){
   if(qid==='ajaeggae')return ajaeggaeQuestions.map((d,i)=>({...d,id:i}));
   if(qid==='history')return historyQuestions.map((d,i)=>({...d,id:i}));
   allQuestions.forEach((q,i)=>{q.id=i});
-  return allQuestions;
+return allQuestions;
 }
-function questNodePath(qid){return qid==='common'?'/quest':'/quest/'+qid}
-function rankNodePath(qid){return qid==='common'?'rankings':'rankings/'+qid}
-function statsNodePath(qid){return qid==='common'?'/qstats':'/qstats/'+qid}
 function statKey(text,cat){
   const t=String(text||'')+'|'+String(cat||'');
   let h=0;for(let i=0;i<t.length;i++)h=(h*31+t.charCodeAt(i))>>>0;
@@ -705,8 +713,10 @@ async function ensureQuest(qid){
   if(questCache[qid]!=null)return questCache[qid];
   questCache[qid]={};
   try{
-    const d=await restJson(questNodePath(qid));
-    questCache[qid]=d||{};
+    const docs=await fsGetWhere('quest','quiz',qid);
+    const map={};
+    docs.forEach(d=>{if(d&&d.key!=null)map[d.key]=(d.data!==undefined)?d.data:d});
+    questCache[qid]=map;
   }catch(e){questCache[qid]={}}
   return questCache[qid];
 }
@@ -735,13 +745,12 @@ window.hideSignupOptions=function(){document.getElementById('auth-gate').classLi
 window.openSignup=function(){showSignupOptions()};
 async function getAccountNick(u){
   if(!u)return '';
-  try{const v=await restJson('/usernames/'+encodeURIComponent(u));return (v&&v.nickname)?v.nickname:''}catch(e){return ''}
+  try{const v=await fsGetDoc('accounts',u);return (v&&v.nickname)?v.nickname:''}catch(e){return ''}
 }
 async function nicknameTaken(nick,curUid){
   try{
-    const all=await restJson('/usernames');
-    if(!all)return false;
-    return Object.keys(all).some(k=>k!==curUid&&all[k]&&all[k].nickname===nick);
+    const all=await fsGetAll('accounts');
+    return all.some(x=>x.id!==curUid&&x.nickname===nick);
   }catch(e){return false}
 }
 function applyNicknameUI(){
@@ -763,7 +772,7 @@ function startSessionWatch(){
   clearInterval(sessionTimer);
   sessionTimer=setInterval(async()=>{
     try{
-      const v=await restJson('/sessions/'+encodeURIComponent(uid));
+      const v=await fsGetDoc('sessions',uid);
       if(!v||v.sid!==mySid){
         clearInterval(sessionTimer);sessionTimer=null;
         alert('다른 기기에서 이 계정으로 로그인되어 자동 로그아웃되었습니다.');
@@ -782,7 +791,7 @@ window.confirmNickname=async function(){
     if(cur){alert('닉네임은 변경할 수 없습니다.');showScreen('screen-start');return}
     if(await nicknameTaken(nick,uid)){alert('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');return}
     try{
-      await db.ref('usernames/'+uid).set({nickname:nick,update:Date.now()});
+      await fsSet('accounts',uid,{nickname:nick,update:Date.now()});
       fsSet('users',nick.replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),{uid:uid,email:authUser?authUser.email:'',nickname:nick,registered:true});
     }catch(e){console.warn('닉네임 저장 실패:',e)}
   }
@@ -829,7 +838,7 @@ function renderLockButtons(){
 window.toggleQuizLock=function(qid){
   if(!isAdmin){alert('관리자만 사용할 수 있습니다.');return}
   const next=isQuizLocked(qid)?'open':'closed';
-  db.ref('locks/'+qid).set(next).catch(()=>{});
+  fsSet('settings','locks',{[qid]:next},{merge:true});
 };
 window.openQuizLobby=function(qid){
   curQuizId=qid||'common';
@@ -848,7 +857,7 @@ function init(){
   allQuestions.forEach((q,i)=>q.id=i);
   ensureQuest('common');
   window.__qLocks={};
-  try{db.ref('locks').on('value',s=>{window.__qLocks=(s&&s.val())||{};renderQuizButtons();renderLockButtons()})}catch(e){}
+  try{fs.collection('settings').doc('locks').onSnapshot(s=>{window.__qLocks=(s&&s.data())||{};renderQuizButtons();renderLockButtons()})}catch(e){}
   showScreen('screen-checking');
   updateStartUI();
   let authResolved=false;
@@ -866,7 +875,7 @@ function init(){
           let registered=true;
           if(!pendingSignup){
             try{
-              registered=!!(await restJson('/registered/'+encodeURIComponent(uid)));
+              registered=!!(await fsGetDoc('accounts',uid).then(a=>a&&a.registered));
               if(!registered){
                 const nick=await getAccountNick(uid);
                 if(nick!=='')registered=true;
@@ -891,7 +900,7 @@ function init(){
           const stored=await getAccountNick(uid);
           if(stored!=='')nickname=stored;
           mySid='sid_'+Date.now()+'_'+Math.random().toString(36).slice(2,10);
-          try{await db.ref('sessions/'+uid).set({sid:mySid,at:Date.now()})}catch(e){}
+          try{await fsSet('sessions',uid,{sid:mySid,at:Date.now()})}catch(e){}
           startSessionWatch();
           updateStartUI();
           routeAfterAuth();
@@ -926,7 +935,7 @@ window.googleSignup=async function(){
     await firebase.auth().signInWithPopup(provider);
     const u=firebase.auth().currentUser;
     if(u){
-      try{await db.ref('registered/'+u.uid).set({at:Date.now()})}catch(e){console.warn('가입 기록 저장 실패:',e)}
+      try{await fsSet('accounts',u.uid,{registered:true},{merge:true})}catch(e){console.warn('가입 기록 저장 실패:',e)}
     }
   }catch(e){
     const c=e.code||'';
@@ -988,7 +997,7 @@ window.emailLogin=async function(){
       await firebase.auth().createUserWithEmailAndPassword(email,pw);
       const u=firebase.auth().currentUser;
       if(u){
-        try{await db.ref('registered/'+u.uid).set({at:Date.now()})}catch(e){console.warn('가입 기록 저장 실패:',e)}
+try{await fsSet('accounts',u.uid,{registered:true},{merge:true})}catch(e){console.warn('가입 기록 저장 실패:',e)}
       }
       pendingSignup=false;
       gateAlerted=false;
@@ -1037,15 +1046,18 @@ window.showMyRecords=async function(){
   window.__recCache={};
   renderRecordCats();
 };
+async function fetchPlayerAttempts(nick,qid){
+  if(!fsReady)return [];
+  const safe=(nick||'empty').replace(/[\/.]+$/,'').replace(/[\/.]/g,'_');
+  const d=await fsGetDoc('players',safe);
+  const attempts=(d&&d.attempts)||[];
+  const arr=attempts.filter(v=>v&&v.nickname===nick&&(v.quiz||'common')===qid).map(v=>({key:String(v.date),val:v}));
+  arr.sort((a,b)=>a.val.date-b.val.date);
+  return arr;
+}
 async function recordData(qid){
   if(window.__recCache[qid])return window.__recCache[qid];
-  const val=await restJson('/qlog');
-  const arr=[];
-  if(val)Object.keys(val).forEach(k=>{
-    const v=val[k];
-    if(v&&v.nickname===nickname&&(v.quiz||'common')===qid)arr.push({key:k,val:v});
-  });
-  arr.sort((a,b)=>a.val.date-b.val.date);
+  const arr=await fetchPlayerAttempts(nickname,qid);
   window.__recCache[qid]=arr;
   return arr;
 }
@@ -1324,43 +1336,31 @@ async function finishQuiz(){
     (async()=>{
       let saved=false;
       try{
-        const val=await restJson('/'+rankNodePath(curQuizId));
+const rows=await fsGetAll('rankings/'+curQuizId+'/records');
         let exists=false;
-        if(val)Object.keys(val).forEach(k=>{const v=val[k];if(v&&v.nickname===nickname)exists=true});
+        rows.forEach(v=>{if(v&&v.nickname===nickname)exists=true});
         if(exists){
           // 이미 같은 닉네임이 기록되어 있으면 무시 (첫 번째 것만 기록 유지)
           console.log('이미 랭킹에 등록된 닉네임입니다. 첫 기록이 유지됩니다.');
 }else{
-          await db.ref(rankNodePath(curQuizId)).push({uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
           fsSet('rankings',curQuizId,{quiz:curQuizId,updated:Date.now()},{merge:true});
           fsSet('rankings/'+curQuizId+'/records',(nickname+'_'+Date.now()).replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),{quiz:curQuizId,uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
           saved=true;
         }
       }catch(e){console.warn('랭킹 저장 실패:',e)}
       try{
-        const stRef=db.ref(curQuizId==='common'?'qstats':'qstats/'+curQuizId);
-        const txs=attemptLog.map(a=>stRef.child(statKey(a.t,a.c)).transaction(s=>{
-          s=s||{tries:0,wrong:0};
-          s.tries++;
-          if(a.wrong)s.wrong++;
-          return s;
-        }));
-        await Promise.allSettled(txs);
         attemptLog.forEach(a=>fsInc('qstats',curQuizId+'_'+statKey(a.t,a.c),{tries:1,wrong:a.wrong?1:0}));
       }catch(e){console.warn('문항 통계 저장 실패:',e)}
       try{
         const logMap={};attemptLog.forEach(a=>logMap[a.id]=a);
-        const qlRef=db.ref('qlog'),now=Date.now();
+        const now=Date.now();
         const playerDocs=[];
-        const writes=currentQuiz.map(q=>{
+        currentQuiz.forEach(q=>{
           const a=logMap[q.id];
-          if(!a)return Promise.resolve();
+          if(!a)return;
           const correctAnswer=q.t==='객관식'?q.o[q.a]:q.a[0];
-          const rec={quiz:curQuizId,uid:uid,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now};
-          playerDocs.push(rec);
-          return qlRef.push(rec);
+          playerDocs.push({quiz:curQuizId,uid:uid,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
         });
-        await Promise.allSettled(writes);
         if(playerDocs.length&&fsReady){
           const arrU=firebase.firestore.FieldValue.arrayUnion;
           fsSet('players',(nickname||'empty').replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),
@@ -1379,9 +1379,9 @@ async function loadRanking(containerId,myScore,qid){
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-const val=await restJson('/'+rankNodePath(qid));
+const rows=await fsGetAll('rankings/'+qid+'/records');
     let data=[];
-    if(val)Object.keys(val).forEach(k=>{const v=val[k];if(v&&typeof v==='object'&&typeof v.score==='number')data.push(v)});
+    rows.forEach(v=>{if(v&&typeof v==='object'&&typeof v.score==='number')data.push(v)});
     const seen={};data.forEach(r=>{const e=seen[r.nickname];if(!e||((r.date||0)<(e.date||0)))seen[r.nickname]=r});
     data=Object.values(seen);
     data.sort((a,b)=>(b.score-a.score)||(a.time-b.time));
@@ -1410,9 +1410,9 @@ async function loadPlayers(qid){
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-const val=await restJson('/'+rankNodePath(qid));
+const rows=await fsGetAll('rankings/'+qid+'/records');
     let data=[];
-    if(val)Object.keys(val).forEach(k=>{const v=val[k];if(v&&typeof v==='object'&&typeof v.score==='number')data.push({key:k,val:v})});
+    rows.forEach(v=>{if(v&&typeof v==='object'&&typeof v.score==='number')data.push({key:v.id,val:v})});
     const seen={};data.forEach(r=>{const e=seen[r.val.nickname];if(!e||((r.val.date||0)<(e.val.date||0)))seen[r.val.nickname]=r});
     data=Object.values(seen);
     data.sort((a,b)=>(b.val.score-a.val.score)||(a.val.time-b.val.time));
@@ -1442,15 +1442,8 @@ window.showPlayerDetail=async function(i){
   det.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){det.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-    const val=await restJson('/qlog');
-    let data=[];
-    if(val)Object.keys(val).forEach(k=>{
-      const v=val[k];
-      if(!v||v.nickname!==nick)return;
-      const vq=v.quiz||'common';
-      if(vq!==qid)return;
-      data.push({key:k,val:v});
-    });
+const arr=await fetchPlayerAttempts(nick,qid);
+    let data=arr;
     data.sort((a,b)=>a.val.date-b.val.date);
     if(data.length===0){
       det.innerHTML=`<div class="detail-back"><div><h3>${esc(nick)}</h3></div><button class="btn btn-secondary" onclick="loadPlayers()">뒤로</button></div><p style="color:#aaa;padding:20px">답안 기록이 없습니다</p>`;
@@ -1567,9 +1560,10 @@ async function loadAnalysis(){
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
     await ensureQuest(adminQuiz);
-    const val=await restJson(adminQuiz==='common'?'/qstats':'/qstats/'+adminQuiz);
+const rows=await fsGetAll('qstats');
     const stats={};
-    if(val)Object.keys(val).forEach(k=>{stats[k]=val[k]});
+    const pre=adminQuiz+'_';
+    rows.forEach(d=>{if(d.id&&d.id.indexOf(pre)===0)stats[d.id.slice(pre.length)]={tries:d.tries||0,wrong:d.wrong||0}});
 analysisStats=getQuestionPool(adminQuiz).map(q=>{
       const s=stats[statKey(q.q,q.cat)]||{tries:0,wrong:0};
       return {q:q,tries:s.tries||0,wrong:s.wrong||0};
@@ -1612,9 +1606,6 @@ const q=r.data.q,st=r.data,rte=rate(st);
     </div>`;
   });
   wrap.innerHTML=html;
-}
-function questRef(qid){
-  return qid==='common'?'quest':'quest/'+qid;
 }
 window.renderQuestList=async function(){
   await ensureQuest(adminQuiz);
@@ -1725,9 +1716,7 @@ window.saveQuest=async function(){
     obj={q,cat,t:'주관식',a:ans.split(',').map(s=>s.trim()).filter(Boolean),e,custom:!isDefault};
   }
 try{
-    const qf=questRef(adminQuiz);
-    const dest=key||(await db.ref(qf).push()).key;
-    await db.ref(qf).child(dest).set(obj);
+    const dest=key||fsNewId('quest');
     fsSet('quest',adminQuiz+'_'+dest,{quiz:adminQuiz,key:dest,data:obj});
     questCache[adminQuiz]=null;
     await ensureQuest(adminQuiz);
@@ -1737,11 +1726,10 @@ try{
 };
 window.toggleQuestHide=async function(key){
   try{
-    const qf=questRef(adminQuiz);
     const map=questCache[adminQuiz]||{};
     const isHiddenNow=!!map[String(key)]&&map[String(key)].remove;
-    if(isHiddenNow){await db.ref(qf).child(String(key)).set(null);fsDel('quest',adminQuiz+'_'+key)}
-    else{await db.ref(qf).child(String(key)).set({remove:true});fsSet('quest',adminQuiz+'_'+key,{quiz:adminQuiz,key:key,data:{remove:true}})}
+    if(isHiddenNow){fsDel('quest',adminQuiz+'_'+key)}
+    else{fsSet('quest',adminQuiz+'_'+key,{quiz:adminQuiz,key:key,data:{remove:true}})}
     questCache[adminQuiz]=null;
     await ensureQuest(adminQuiz);
     renderQuestList();
@@ -1750,7 +1738,6 @@ window.toggleQuestHide=async function(key){
 window.deleteQuest=async function(key){
   if(!confirm('이 문제를 삭제할까요? (통계는 남아있습니다)'))return;
   try{
-    await db.ref(questRef(adminQuiz)).child(String(key)).set(null);
     fsDel('quest',adminQuiz+'_'+key);
     questCache[adminQuiz]=null;
     await ensureQuest(adminQuiz);
