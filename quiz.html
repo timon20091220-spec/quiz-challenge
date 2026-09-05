@@ -383,6 +383,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
       <h2 style="margin-bottom:5px">관리자 전용</h2>
       <p style="color:#aaa;margin-bottom:15px;font-size:.9em">문항 오답률 · 답안 기록 분석 · <span id="app-version" style="color:#777"></span></p>
       <div id="analysis-content" class="hidden">
+        <div id="admin-diag" style="border:1px dashed #f66;border-radius:10px;padding:10px 12px;margin-bottom:14px;font-size:.78em;color:#ffcccc;text-align:left;line-height:1.7"></div>
         <div style="text-align:center;margin-bottom:16px">
           <select id="admin-qsel" class="analysis-select" onchange="adminQuizChanged()"></select>
         </div>
@@ -509,7 +510,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-const APP_VER='v10';
+const APP_VER='v11';
 (function(){try{var m=(location.search||'').match(/[?&]v=([^&]*)/);if(!m||decodeURIComponent(m[1])!==APP_VER)location.replace(location.pathname+'?v='+APP_VER)}catch(e){}})();
 window.__dbgErrs=[];
 function showDbg(msg){
@@ -1900,6 +1901,86 @@ window.deleteQuest=async function(key){
   }catch(err){alert('삭제 실패: '+err.message)}
 };
 init();
+</script>
+<script>
+(function(){
+  function esc2(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;')}
+  function refresh(){
+    try{
+      var box=document.getElementById('admin-diag');
+      if(!box)return;
+      var fns=['showAnalysis','showAnalysisTab','renderQuestList','openQuestForm','saveQuest'];
+      var okCount=0;
+      var st=fns.map(function(f){var ok=(typeof window[f]==='function');if(ok)okCount++;return ok?(f+'O'):(f+'X')}).join(' ');
+      var fsOk='?';
+      try{fsOk=(typeof fs!=='undefined'&&fs)?'O':'X'}catch(e){fsOk='X'}
+      var errs=(window.__dbgErrs||[]).slice(-3).join(' | ');
+      var ua='';
+      try{ua=(navigator.userAgent||'').replace(/\s+/g,' ').slice(0,70)}catch(e){ua='?'}
+      box.innerHTML='<b style="color:#fff">진단창 (그대로 읽어서 알려주세요)</b><br>함수 '+okCount+'/5 · FS '+fsOk+' · '+esc2(ua)+(errs?'<br>오류: '+esc2(errs):'')+'<br>'+esc2(st)+'<br><button id="diag-direct" style="margin-top:6px;padding:9px 16px;border:none;border-radius:8px;background:#f44336;color:#fff;font-weight:700;cursor:pointer;font-size:.95em">비상용 문제관리 열기</button>';
+      var btn=document.getElementById('diag-direct');
+      if(btn&&!btn.dataset.bound){btn.dataset.bound='1';btn.addEventListener('click',directEditor)}
+    }catch(e){}
+  }
+  function restSave(quiz,key,obj,cb){
+    try{
+      var url='https://firestore.googleapis.com/v1/projects/quiz-ranking-6cb9f/databases/(default)/documents/quest/'+quiz+'_'+key+'?key=AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k';
+      fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:{
+        quiz:{stringValue:quiz},key:{stringValue:String(key)},
+        data:{mapValue:{fields:{
+          q:{stringValue:String(obj.q||'')},cat:{stringValue:String(obj.cat||'')},t:{stringValue:obj.t||'주관식'},
+          a:{arrayValue:{values:(obj.a||[]).map(function(x){return {stringValue:String(x)}})}},
+          e:{stringValue:String(obj.e||'')},custom:{booleanValue:!!obj.custom}
+        }}}
+      }})}).then(function(r){cb(r.ok)}).catch(function(){cb(false)});
+    }catch(e){cb(false)}
+  }
+  function directEditor(){
+    try{
+      var quiz=prompt('어떤 퀴즈?\n1 = 상식 (96문제)\n2 = 아재개그 (65문제)','1');
+      if(quiz===null)return;
+      quiz=(String(quiz).indexOf('2')===0)?'ajaeggae':'common';
+      var pool=null;
+      try{pool=getQuestionPool(quiz)}catch(e){pool=null}
+      if(!pool||!pool.length){
+        try{pool=(quiz==='common')?allQuestions.slice():ajaeggaeQuestions.slice()}catch(e){pool=[]}
+      }
+      if(!pool.length){alert('문제 배열을 못 찾았어요. 진단창 내용을 알려주세요.');return}
+      var list='';
+      pool.forEach(function(q,i){
+        var ans=(q.t==='객관식'&&q.o)?q.o[q.a]:(q.a?q.a.join(','):'');
+        list+=i+'. '+String(q.q).slice(0,34)+' ['+String(ans).slice(0,18)+']\n';
+      });
+      var pick=prompt('수정할 문제 번호 입력:\n'+list.slice(0,1700),'');
+      if(pick===null)return;
+      var n=parseInt(pick,10);
+      if(isNaN(n)||n<0||n>=pool.length){alert('번호가 이상해요');return}
+      var q=pool[n];
+      var cur=(q.t==='객관식'&&q.o)?q.o[q.a]:(q.a?q.a.join(','):'');
+      var ans=prompt('문제 #'+n+'\n'+String(q.q).slice(0,80)+'\n\n새 정답 입력 (여러 개는 쉼표로):',cur);
+      if(ans===null||!ans.trim())return;
+      var arr=ans.split(',').map(function(s){return s.trim()}).filter(Boolean);
+      if(!arr.length){alert('정답이 비었어요');return}
+      var obj={q:q.q,cat:q.cat,t:q.t,e:q.e||'',custom:false,a:arr};
+      var done=false;
+      try{
+        if(typeof fsSet==='function'&&(typeof fs!=='undefined'&&fs)){
+          fsSet('quest',quiz+'_'+n,{quiz:quiz,key:String(n),data:obj});
+          done=true;
+        }
+      }catch(e){}
+      if(done){
+        try{questCache[quiz]=null}catch(e){}
+        alert('저장 완료! (원래 문제관리 화면을 껐다 켜면 반영돼요)');
+      }else{
+        restSave(quiz,n,obj,function(ok){alert(ok?'저장 완료! (비상 경로)':'저장 실패... 진단창 내용을 알려주세요')});
+      }
+    }catch(e){alert('비상 편집 오류: '+e.message)}
+  }
+  window.addEventListener('error',function(e){try{var d=document.getElementById('admin-diag');if(d)d.style.borderColor='#fff'}catch(_){}});
+  refresh();
+  setInterval(refresh,2000);
+})();
 </script>
 </body>
 </html>
