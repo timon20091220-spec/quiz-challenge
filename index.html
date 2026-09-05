@@ -125,6 +125,29 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .detail-back h3{color:#ffd200}
 .session-tag{margin:18px 0 8px;font-size:.85em;color:#aaa;display:flex;align-items:center;gap:10px}
 .session-tag::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.08)}
+.quest-form{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:22px;margin-bottom:18px}
+.qf-label{display:block;text-align:left;font-size:.82em;color:#aaa;margin:12px 0 6px}
+.qf-input{width:100%;padding:12px 14px;border:2px solid #444;border-radius:10px;background:#0f0c29;color:#fff;font-size:.95em;outline:none;transition:border .2s;margin-bottom:4px}
+.qf-input:focus{border-color:#ffd200}
+.qf-input::placeholder{color:#666}
+.qf-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.qf-2col .qf-label{margin-top:12px}
+.qf-2col .qf-input{margin-bottom:4px}
+.quest-item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:14px 6px;border-bottom:1px solid rgba(255,255,255,.07);font-size:.92em}
+.quest-item:last-child{border-bottom:none}
+.quest-item.hidden_q{opacity:.4}
+.quest-item .qt-left{flex:1;min-width:0}
+.quest-item .qt-q{line-height:1.5;margin-bottom:4px}
+.quest-item .qt-meta{font-size:.78em;color:#aaa}
+.quest-item .qt-btns{display:flex;gap:6px;flex-shrink:0}
+.qt-btn{padding:6px 12px;border:none;border-radius:8px;font-size:.8em;cursor:pointer;font-weight:600}
+.qt-btn.edit{background:#333;color:#ffd200}
+.qt-btn.edit:hover{background:#444}
+.qt-btn.toggle{background:#222;color:#ccc}
+.qt-btn.toggle:hover{color:#fff}
+.qt-btn.del{background:#3a1616;color:#f44336}
+.qt-btn.del:hover{background:#571f1f}
+@media(max-width:500px){.qf-2col{grid-template-columns:1fr}.quest-item{flex-direction:column;align-items:flex-start}}
 .chk{width:42px;height:26px;display:inline-flex;align-items:center;cursor:pointer}
 @media(max-width:500px){.logo{font-size:2em}.question-text{font-size:1.05em}.score-details{grid-template-columns:1fr}.quiz-header{flex-direction:column;align-items:flex-start}.option-grid{grid-template-columns:1fr}}
 </style>
@@ -204,6 +227,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
         <div style="display:flex;justify-content:center;gap:10px;margin-bottom:20px">
           <button id="tab-stats" class="tab-btn tab-active" onclick="showAnalysisTab('stats')">오답률 분석</button>
           <button id="tab-log" class="tab-btn" onclick="showAnalysisTab('log')">답안 기록</button>
+          <button id="tab-quest" class="tab-btn" onclick="showAnalysisTab('quest')">문제 관리</button>
         </div>
         <div id="analysis-controls" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:15px;justify-content:center;align-items:center">
           <select id="analysis-sort" class="analysis-select" onchange="renderAnalysis()">
@@ -226,6 +250,49 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
             <div id="anslog-player-list"><div class="loading"><div class="spinner"></div></div></div>
           </div>
           <div id="anslog-player-detail" class="hidden"></div>
+        </div>
+        <div id="quest-wrap" class="hidden" style="text-align:left">
+          <div id="quest-form" class="quest-form hidden">
+            <h3 id="qf-title" style="margin-bottom:4px">새 문제 추가</h3>
+            <p class="modal-sub" style="text-align:left;margin-bottom:16px">기본 문제 128개에 추가하거나, 기존 문제를 수정/숨길 수 있습니다</p>
+            <input type="hidden" id="qf-key">
+            <label class="qf-label">문제</label>
+            <textarea id="qf-q" class="qf-input" rows="2"></textarea>
+            <div class="qf-2col">
+              <div><label class="qf-label">카테고리</label>
+                <select id="qf-cat" class="qf-input"><option>역사</option><option>과학</option><option>재밌는</option></select>
+              </div>
+              <div><label class="qf-label">유형</label>
+                <select id="qf-type" class="qf-input" onchange="toggleQuestType()"><option value="주관식">주관식</option><option value="객관식">객관식</option></select>
+              </div>
+            </div>
+            <div id="qf-obj" class="hidden">
+              <label class="qf-label">보기 (4개)</label>
+              <input id="qf-o1" class="qf-input" placeholder="보기 1">
+              <input id="qf-o2" class="qf-input" placeholder="보기 2">
+              <input id="qf-o3" class="qf-input" placeholder="보기 3">
+              <input id="qf-o4" class="qf-input" placeholder="보기 4">
+              <label class="qf-label">정답 위치</label>
+              <select id="qf-a" class="qf-input"><option value="0">보기 1</option><option value="1">보기 2</option><option value="2">보기 3</option><option value="3">보기 4</option></select>
+            </div>
+            <div id="qf-subj" class="hidden">
+              <label class="qf-label">정답 (여러 개는 쉼표로 구분)</label>
+              <input id="qf-ans" class="qf-input" placeholder="예: 이성계, 태조">
+            </div>
+            <label class="qf-label">해설</label>
+            <textarea id="qf-e" class="qf-input" rows="2"></textarea>
+            <div class="modal-btns" style="margin-top:18px">
+              <button class="btn btn-primary" onclick="saveQuest()">저장</button>
+              <button class="btn btn-secondary" onclick="closeQuestForm()">취소</button>
+            </div>
+          </div>
+          <div id="quest-list-view">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-primary" style="padding:10px 18px;font-size:.9em;margin:0" onclick="openQuestForm()">+ 새 문제 추가</button>
+              <input type="text" id="quest-search" placeholder="문제 검색..." class="analysis-select" style="flex:1;min-width:140px" oninput="renderQuestList()">
+            </div>
+            <div id="quest-list"><div class="loading"><div class="spinner"></div></div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -400,18 +467,52 @@ const allQuestions=[
 {q:"이순신 장군이 사용한 해전 전술 이름은?",a:["학익진"],cat:"재밌는",e:"학익진은 학이 날개를 편 형태의 전법으로, 양날개로 적을 포위하여 공격하는 해전 전술입니다. 한산도대첩에서 결정적으로 사용되었습니다."}
 ];
 
-let currentQuiz=[],currentIdx=0,score=0,answered=false,startTime,timerInterval,timeLeft=1800,nickname='',selectedOption=-1,qTimerInterval=null,attemptLog=[],analysisStats=null;
+let currentQuiz=[],currentIdx=0,score=0,answered=false,startTime,timerInterval,timeLeft=1800,nickname='',selectedOption=-1,qTimerInterval=null,attemptLog=[],analysisStats=null,questData=null;
 
-function init(){allQuestions.forEach((q,i)=>q.id=i);showScreen('screen-start')}
+function init(){
+  allQuestions.forEach((q,i)=>q.id=i);
+  ensureQuest();
+  showScreen('screen-start');
+}
+async function ensureQuest(){
+  if(questData!==null)return questData;
+  questData={};
+  if(firebaseReady){
+    try{
+      const snap=await db.ref('quest').once('value');
+      const d={};snap.forEach(c=>d[c.key]=c.val());
+      questData=d;
+    }catch(e){console.warn('커스텀 문제 로드 실패:',e);questData={}}
+  }
+  return questData;
+}
+function getQuestionPool(){
+  const map=questData||{};
+  const out=allQuestions.map((d,i)=>{
+    const ov=map[String(i)];
+    if(!ov)return d;
+    if(ov.remove)return null;
+    const merged={...d,...ov};
+    return merged;
+  }).filter(Boolean);
+  Object.keys(map).forEach(k=>{
+    const v=map[k];
+    if(!v||v.remove)return;
+    if(v.custom===true){v.id=k;out.push(v)}
+  });
+  return out;
+}
 window.goStart=function(){showScreen('screen-start')};
 window.showScreen=function(id){document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));document.getElementById(id).classList.remove('hidden')};
 window.showRankingOnly=function(){showScreen('screen-ranking');loadRanking('ranking-standalone-wrap',null)};
 
-window.startQuiz=function(){
+window.startQuiz=async function(){
   nickname=document.getElementById('nickname').value.trim();
   if(!nickname){alert('닉네임을 입력해주세요.');return}
+  await ensureQuest();
+  const pool=getQuestionPool();
   const cats={역사:[],과학:[],재밌는:[]};
-  allQuestions.forEach(q=>{if(cats[q.cat])cats[q.cat].push(q)});
+  pool.forEach(q=>{if(cats[q.cat])cats[q.cat].push(q)});
   Object.values(cats).forEach(a=>shuffle(a));
   currentQuiz=[];
   Object.values(cats).forEach(a=>{currentQuiz.push(...a.slice(0,Math.ceil(32/3)))});
@@ -575,8 +676,10 @@ async function finishQuiz(){
   }else{rw.classList.add('hidden')}
   if(firebaseReady){
     try{
-      const snap=await db.ref('rankings').orderByChild('nickname').equalTo(nickname).once('value');
-      if(snap.exists()){
+      const snap=await db.ref('rankings').once('value');
+      let exists=false;
+      snap.forEach(c=>{if(c.val().nickname===nickname)exists=true});
+      if(exists){
         // 이미 같은 닉네임이 기록되어 있으면 무시 (첫 번째 것만 기록 유지)
         console.log('이미 랭킹에 등록된 닉네임입니다. 첫 기록이 유지됩니다.');
       }else{
@@ -613,8 +716,10 @@ async function loadRanking(containerId,myScore){
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-    const snap=await db.ref('rankings').orderByChild('score').limitToLast(50).once('value');
-    let data=[];snap.forEach(c=>{data.push(c.val())});data.reverse();
+    const snap=await db.ref('rankings').once('value');
+    let data=[];snap.forEach(c=>data.push(c.val()));
+    data.sort((a,b)=>(b.score-a.score)||(a.time-b.time));
+    data=data.slice(0,50);
     if(data.length===0){wrap.innerHTML='<p style="color:#aaa;padding:20px">아직 랭킹 데이터가 없습니다</p>';return}
     let html='<table class="ranking-table"><thead><tr><th>#</th><th>닉네임</th><th>점수</th><th>정답</th><th>시간</th></tr></thead><tbody>';
     data.forEach((r,i)=>{
@@ -637,8 +742,9 @@ async function loadPlayers(){
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-    const snap=await db.ref('rankings').orderByChild('score').limitToLast(50).once('value');
-    let data=[];snap.forEach(c=>data.push({key:c.key,val:c.val()}));data.reverse();
+    const snap=await db.ref('rankings').once('value');
+    let data=[];snap.forEach(c=>data.push({key:c.key,val:c.val()}));
+    data.sort((a,b)=>(b.val.score-a.val.score)||(a.val.time-b.val.time));
     playerList=data.map(r=>r.val.nickname);
     if(data.length===0){wrap.innerHTML='<p style="color:#aaa;padding:20px">아직 랭킹 데이터가 없습니다</p>';return}
     const medals=['1st','2nd','3rd'];
@@ -665,8 +771,8 @@ window.showPlayerDetail=async function(i){
   det.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){det.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-    const snap=await db.ref('qlog').orderByChild('nickname').equalTo(nick).limitToLast(300).once('value');
-    let data=[];snap.forEach(c=>data.push({key:c.key,val:c.val()}));
+    const snap=await db.ref('qlog').once('value');
+    let data=[];snap.forEach(c=>{if(c.val().nickname===nick)data.push({key:c.key,val:c.val()})});
     data.sort((a,b)=>b.val.date-a.val.date);
     if(data.length===0){
       det.innerHTML=`<div class="detail-back"><div><h3>${esc(nick)}</h3></div><button class="btn btn-secondary" onclick="loadPlayers()">뒤로</button></div><p style="color:#aaa;padding:20px">답안 기록이 없습니다</p>`;
@@ -723,19 +829,24 @@ document.addEventListener('keydown',function(e){
 window.showAnalysisTab=function(t){
   document.getElementById('tab-stats').classList.toggle('tab-active',t==='stats');
   document.getElementById('tab-log').classList.toggle('tab-active',t==='log');
+  document.getElementById('tab-quest').classList.toggle('tab-active',t==='quest');
   document.getElementById('analysis-controls').classList.toggle('hidden',t!=='stats');
   document.getElementById('analysis-wrap').classList.toggle('hidden',t!=='stats');
   document.getElementById('answerlog-wrap').classList.toggle('hidden',t!=='log');
+  document.getElementById('quest-wrap').classList.toggle('hidden',t!=='quest');
+  if(t==='quest')renderQuestList();
+  if(t==='log')loadPlayers();
 };
 async function loadAnalysis(){
   const wrap=document.getElementById('analysis-wrap');
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
+    await ensureQuest();
     const snap=await db.ref('qstats').once('value');
     const stats={};
     snap.forEach(c=>{stats[c.key]=c.val()});
-    analysisStats=allQuestions.map(q=>{
+    analysisStats=getQuestionPool().map(q=>{
       const s=stats[q.id]||{tries:0,wrong:0};
       return {q:q,tries:s.tries||0,wrong:s.wrong||0};
     });
@@ -777,6 +888,139 @@ window.renderAnalysis=function(){
   });
   wrap.innerHTML=html;
 }
+window.renderQuestList=async function(){
+  await ensureQuest();
+  const list=document.getElementById('quest-list');
+  const search=(document.getElementById('quest-search').value||'').trim();
+  const map=questData||{};
+  let items=[];
+  allQuestions.forEach((d,i)=>{
+    const ov=map[String(i)]||{};
+    items.push({q:{...d,...ov,id:Number(i)},hidden:!!ov.remove,custom:false});
+  });
+  Object.keys(map).forEach(k=>{
+    const v=map[k];
+    if(v&&v.custom===true)items.push({q:{...v,id:k},hidden:false,custom:true});
+  });
+  let filtered=items;
+  if(search)filtered=items.filter(r=>r.q.q.toLowerCase().includes(search.toLowerCase()));
+  if(filtered.length===0){list.innerHTML='<p style="color:#aaa;padding:20px">문제가 없습니다</p>';return}
+  let html='';
+  filtered.forEach(r=>{
+    const q=r.q,isHidden=r.hidden,isCustom=r.custom;
+    const catCls=q.cat==='역사'?'cat-history':q.cat==='과학'?'cat-science':'cat-fun';
+    const typeTxt=q.t==='객관식'?'객관식':'주관식';
+    const ans=q.t==='객관식'?q.o[q.a]:q.a.join(', ');
+    html+=`<div class="quest-item ${isHidden?'hidden_q':''}">
+      <div class="qt-left">
+        <div class="qt-q">${isHidden?'<span style="color:#f44336">[숨김]</span> ':''}${esc(q.q)}</div>
+        <div class="qt-meta"><span class="aq-cat ${catCls}">${q.cat}</span> ${typeTxt} ${isCustom?'· 추가문제':''} · 정답: ${esc(ans)}</div>
+      </div>
+      <div class="qt-btns">
+        <button class="qt-btn edit" onclick="openQuestForm('${esc(q.id)}')">편집</button>
+        <button class="qt-btn toggle" onclick="toggleQuestHide('${esc(q.id)}')">${isHidden?'보이기':'숨기기'}</button>
+        ${isCustom?`<button class="qt-btn del" onclick="deleteQuest('${esc(q.id)}')">삭제</button>`:''}
+      </div>
+    </div>`;
+  });
+  list.innerHTML=html;
+};
+window.openQuestForm=function(key){
+  document.getElementById('quest-list-view').classList.add('hidden');
+  const form=document.getElementById('quest-form');
+  form.classList.remove('hidden');
+  const reset=()=>{
+    document.getElementById('qf-key').value='';
+    document.getElementById('qf-title').textContent='새 문제 추가';
+    document.getElementById('qf-q').value='';
+    document.getElementById('qf-cat').value='역사';
+    document.getElementById('qf-type').value='주관식';
+    document.getElementById('qf-o1').value='';document.getElementById('qf-o2').value='';
+    document.getElementById('qf-o3').value='';document.getElementById('qf-o4').value='';
+    document.getElementById('qf-a').value='0';
+    document.getElementById('qf-ans').value='';
+    document.getElementById('qf-e').value='';
+    toggleQuestType();
+  };
+  if(key){
+    const map=questData||{};
+    let q=null;
+    if(/^\d+$/.test(String(key))){const d=allQuestions[Number(key)];if(d)q={...d,...(map[String(key)]||{})}}
+    else if(map[String(key)])q=map[String(key)];
+    if(q){
+      document.getElementById('qf-key').value=String(key);
+      document.getElementById('qf-title').textContent='문제 편집';
+      document.getElementById('qf-q').value=q.q;
+      document.getElementById('qf-cat').value=q.cat;
+      document.getElementById('qf-type').value=q.t==='객관식'?'객관식':'주관식';
+      if(q.t==='객관식'){
+        document.getElementById('qf-o1').value=q.o[0]||'';document.getElementById('qf-o2').value=q.o[1]||'';
+        document.getElementById('qf-o3').value=q.o[2]||'';document.getElementById('qf-o4').value=q.o[3]||'';
+        document.getElementById('qf-a').value=String(q.a);
+      }else{
+        document.getElementById('qf-ans').value=q.a.join(', ');
+      }
+      document.getElementById('qf-e').value=q.e||'';
+      toggleQuestType();
+    }
+  }else{reset()}
+};
+window.toggleQuestType=function(){
+  const t=document.getElementById('qf-type').value;
+  document.getElementById('qf-obj').classList.toggle('hidden',t!=='객관식');
+  document.getElementById('qf-subj').classList.toggle('hidden',t!=='주관식');
+};
+window.closeQuestForm=function(){
+  document.getElementById('quest-form').classList.add('hidden');
+  document.getElementById('quest-list-view').classList.remove('hidden');
+};
+window.saveQuest=async function(){
+  const q=document.getElementById('qf-q').value.trim();
+  const cat=document.getElementById('qf-cat').value;
+  const type=document.getElementById('qf-type').value;
+  const e=document.getElementById('qf-e').value.trim();
+  const key=document.getElementById('qf-key').value;
+  if(!q){alert('문제를 입력해주세요.');return}
+  let obj;
+  const isDefault=/^\d+$/.test(key);
+  if(type==='객관식'){
+    const o=[1,2,3,4].map(i=>document.getElementById('qf-o'+i).value.trim());
+    if(o.some(x=>!x)){alert('보기 4개를 모두 입력해주세요.');return}
+    const a=parseInt(document.getElementById('qf-a').value,10);
+    obj={q,cat,t:'객관식',o,a,e,custom:!isDefault};
+  }else{
+    const ans=document.getElementById('qf-ans').value.trim();
+    if(!ans){alert('정답을 입력해주세요.');return}
+    obj={q,cat,t:'주관식',a:ans.split(',').map(s=>s.trim()).filter(Boolean),e,custom:!isDefault};
+  }
+  try{
+    const dest=key||(await db.ref('quest').push()).key;
+    await db.ref('quest').child(dest).set({...obj,key:undefined});
+    questData=null;
+    await ensureQuest();
+    closeQuestForm();
+    renderQuestList();
+  }catch(err){alert('저장 실패: '+err.message)}
+};
+window.toggleQuestHide=async function(key){
+  try{
+    const isHiddenNow=!!questData[String(key)]&&questData[String(key)].remove;
+    if(isHiddenNow){await db.ref('quest').child(String(key)).set(null)}
+    else{await db.ref('quest').child(String(key)).set({remove:true})}
+    questData=null;
+    await ensureQuest();
+    renderQuestList();
+  }catch(err){alert('실패: '+err.message)}
+};
+window.deleteQuest=async function(key){
+  if(!confirm('이 문제를 삭제할까요? (통계는 남아있습니다)'))return;
+  try{
+    await db.ref('quest').child(String(key)).set(null);
+    questData=null;
+    await ensureQuest();
+    renderQuestList();
+  }catch(err){alert('삭제 실패: '+err.message)}
+};
 init();
 </script>
 </body>
