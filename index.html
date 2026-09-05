@@ -509,8 +509,28 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-const APP_VER='v8';
+const APP_VER='v9';
 (function(){try{var m=(location.search||'').match(/[?&]v=([^&]*)/);if(!m||decodeURIComponent(m[1])!==APP_VER)location.replace(location.pathname+'?v='+APP_VER)}catch(e){}})();
+window.__dbgErrs=[];
+function showDbg(msg){
+  try{
+    msg=String(msg).slice(0,180);
+    if(window.__dbgErrs[window.__dbgErrs.length-1]!==msg)window.__dbgErrs.push(msg);
+    if(window.__dbgErrs.length>4)window.__dbgErrs=window.__dbgErrs.slice(-4);
+    refreshDbg();
+  }catch(e){}
+}
+function refreshDbg(){
+  try{
+    if(typeof isAdmin==='undefined'||!isAdmin||!window.__dbgErrs||!window.__dbgErrs.length)return;
+    var d=document.getElementById('dbg-strip');
+    if(!d){d=document.createElement('div');d.id='dbg-strip';d.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#c62828;color:#fff;font-size:12px;padding:8px 12px;font-family:monospace;word-break:break-all';(document.body||document.documentElement).appendChild(d)}
+    d.textContent='진단: '+window.__dbgErrs.join(' | ');
+    d.style.display='block';
+  }catch(e){}
+}
+window.addEventListener('error',function(e){showDbg('오류 '+(e.message||'?')+' 줄'+(e.lineno||'?'))});
+window.addEventListener('unhandledrejection',function(e){var r=e&&e.reason;showDbg('비동기 '+((r&&(r.code||r.message))||String(r)).slice(0,120))});
 const firebaseConfig={apiKey:"AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k",authDomain:"quiz-ranking-6cb9f.firebaseapp.com",projectId:"quiz-ranking-6cb9f",storageBucket:"quiz-ranking-6cb9f.firebasestorage.app",messagingSenderId:"488270918333",appId:"1:488270918333:web:93f4612335b58780b43dd4"};
 const ADMIN_PW='triuytje123!';
 let fs,fsReady=false,firebaseReady=false;try{firebase.initializeApp(firebaseConfig);try{fs=firebase.firestore();fsReady=true}catch(e){console.warn("파이어스토어 연결 실패:",e)}firebaseReady=true}catch(e){console.warn("파이어베이스 연결 실패:",e)}
@@ -1611,13 +1631,16 @@ const list=attempts[attemptSel]||[];
 
 let adminTab='stats';
 window.showAnalysis=function(){
-  if(!authUser){alert('관리자 계정으로 로그인하세요.');return}
-  if(!isAdmin){alert('관리자 계정이 아닙니다.');return}
-  const av=document.getElementById('app-version');if(av)av.textContent='앱 버전 '+APP_VER;
-  document.getElementById('analysis-content').classList.remove('hidden');
-  showScreen('screen-analysis');
-  initAdminQuizUI();
-  showAnalysisTab('stats');
+  try{
+    if(!authUser){alert('관리자 계정으로 로그인하세요.');return}
+    if(!isAdmin){alert('관리자 계정이 아닙니다.');return}
+    const av=document.getElementById('app-version');if(av)av.textContent='앱 버전 '+APP_VER;
+    document.getElementById('analysis-content').classList.remove('hidden');
+    showScreen('screen-analysis');
+    initAdminQuizUI();
+    showAnalysisTab('stats');
+    try{refreshDbg()}catch(e){}
+  }catch(e){showDbg('분석화면 '+(e&&(e.message||e)));alert('관리자 화면 오류: '+(e&&e.message||e))}
 };
 function initAdminQuizUI(){
   const sel=document.getElementById('admin-qsel');
@@ -1652,17 +1675,19 @@ if(window.visualViewport&&window.visualViewport.addEventListener){
   });
 }
 window.showAnalysisTab=function(t){
-  adminTab=t;
-  document.getElementById('tab-stats').classList.toggle('tab-active',t==='stats');
-  document.getElementById('tab-log').classList.toggle('tab-active',t==='log');
-  document.getElementById('tab-quest').classList.toggle('tab-active',t==='quest');
-  document.getElementById('analysis-controls').classList.toggle('hidden',t!=='stats');
-  document.getElementById('analysis-wrap').classList.toggle('hidden',t!=='stats');
-  document.getElementById('answerlog-wrap').classList.toggle('hidden',t!=='log');
-  document.getElementById('quest-wrap').classList.toggle('hidden',t!=='quest');
-  if(t==='stats')setTimeout(()=>loadAnalysis(),0);
-  if(t==='quest')renderQuestList();
-  if(t==='log')loadPlayers();
+  try{
+    adminTab=t;
+    document.getElementById('tab-stats').classList.toggle('tab-active',t==='stats');
+    document.getElementById('tab-log').classList.toggle('tab-active',t==='log');
+    document.getElementById('tab-quest').classList.toggle('tab-active',t==='quest');
+    document.getElementById('analysis-controls').classList.toggle('hidden',t!=='stats');
+    document.getElementById('analysis-wrap').classList.toggle('hidden',t!=='stats');
+    document.getElementById('answerlog-wrap').classList.toggle('hidden',t!=='log');
+    document.getElementById('quest-wrap').classList.toggle('hidden',t!=='quest');
+    if(t==='stats')setTimeout(()=>loadAnalysis(),0);
+    if(t==='quest')renderQuestList();
+    if(t==='log')loadPlayers();
+  }catch(e){showDbg('탭전환 '+(e&&(e.message||e)));alert('탭 전환 오류: '+(e&&e.message||e))}
 };
 async function loadAnalysis(){
   const wrap=document.getElementById('analysis-wrap');
@@ -1718,9 +1743,11 @@ const q=r.data.q,st=r.data,rte=rate(st);
   wrap.innerHTML=html;
 }
 window.renderQuestList=async function(){
-  await ensureQuestFast(adminQuiz);
   const list=document.getElementById('quest-list');
-  const search=(document.getElementById('quest-search').value||'').trim();
+  list.innerHTML='<div class="loading"><div class="spinner"></div></div><p style="color:#aaa;padding:10px;font-size:.85em;text-align:center">문제 목록 불러오는 중...</p>';
+  try{
+    await ensureQuestFast(adminQuiz);
+    const search=(document.getElementById('quest-search').value||'').trim();
   const map=questCache[adminQuiz]||{};
   let items=[];
   baseQuestions(adminQuiz).forEach((d,i)=>{
@@ -1753,7 +1780,11 @@ const q=r.q,isHidden=r.hidden,isCustom=r.custom;
       </div>
     </div>`;
   });
-  list.innerHTML=html;
+  list.innerHTML=html+'<p style="color:#777;font-size:.8em;margin-top:12px;text-align:center">총 '+filtered.length+'문제 표시됨</p>';
+  }catch(e){
+    showDbg('문제목록 '+(e&&(e.message||e)));
+    list.innerHTML='<p style="color:#f44336;padding:16px">문제 목록 오류: '+esc(String(e&&e.message||e))+'</p>';
+  }
 };
 function setCatOptions(sel,cur){
   const base=['상식','재밌는','역사','과학'];
@@ -1762,8 +1793,9 @@ function setCatOptions(sel,cur){
   sel.value=(cur&&cats.indexOf(cur)!==-1)?cur:cats[0];
 }
 window.openQuestForm=async function(key){
-  await ensureQuestFast(adminQuiz);
-  const map=questCache[adminQuiz]||{};
+  try{
+    await ensureQuestFast(adminQuiz);
+    const map=questCache[adminQuiz]||{};
   document.getElementById('quest-list-view').classList.add('hidden');
   const form=document.getElementById('quest-form');
   form.classList.remove('hidden');
@@ -1804,6 +1836,11 @@ document.getElementById('qf-title').textContent='문제 편집';
       toggleQuestType();
     }
   }else{reset()}
+  }catch(e){
+    showDbg('편집화면 '+(e&&(e.message||e)));
+    alert('편집 화면 오류: '+(e&&e.message||e));
+    try{document.getElementById('quest-form').classList.add('hidden');document.getElementById('quest-list-view').classList.remove('hidden')}catch(e2){}
+  }
 };
 window.toggleQuestType=function(){
   const t=document.getElementById('qf-type').value;
