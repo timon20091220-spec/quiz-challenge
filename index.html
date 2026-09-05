@@ -208,6 +208,17 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
       <button class="btn btn-secondary" style="width:min(92%,300px)" onclick="openEmailLogin()">이메일로 로그인</button>
       <button class="link-btn" onclick="hideLoginOptions()">← 뒤로</button>
     </div>
+    <div id="auth-signup-options" class="hidden" style="margin-top:22px;display:flex;flex-direction:column;align-items:center;gap:12px">
+      <p style="color:#aaa;font-size:.9em">계정 만들기</p>
+      <button class="btn btn-google" style="width:min(92%,300px)" onclick="googleSignup()">
+        <span class="google-g" style="width:20px;height:20px;flex:0 0 20px">
+        <svg viewBox="0 0 48 48" width="20" height="20"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      </span>
+        <span>구글로 회원가입</span>
+      </button>
+      <button class="btn btn-secondary" style="width:min(92%,300px)" onclick="openEmailLogin('signup')">이메일로 회원가입</button>
+      <button class="link-btn" onclick="hideSignupOptions()">← 뒤로</button>
+    </div>
     <div id="quiz-menu" class="hidden" style="margin-top:18px">
       <div id="nick-wrap" class="hidden" style="margin-bottom:20px">
         <p style="color:#aaa;font-size:.9em;margin-bottom:6px">나의 닉네임 <span style="font-size:.8em;color:#666">(변경 불가)</span></p>
@@ -738,9 +749,11 @@ function getQuestionPool(qid){
 }
 
 let uid='',mySid='',sessionTimer=null,pendingSignup=false,gateAlerted=false;
-window.showLoginOptions=function(){document.getElementById('auth-gate').classList.add('hidden');document.getElementById('auth-login-options').classList.remove('hidden')};
-window.hideLoginOptions=function(){document.getElementById('auth-gate').classList.remove('hidden');document.getElementById('auth-login-options').classList.add('hidden')};
-window.openSignup=function(){openEmailLogin('signup')};
+window.showLoginOptions=function(){document.getElementById('auth-gate').classList.add('hidden');document.getElementById('auth-login-options').classList.remove('hidden');document.getElementById('auth-signup-options').classList.add('hidden')};
+window.hideLoginOptions=function(){document.getElementById('auth-gate').classList.remove('hidden');document.getElementById('auth-login-options').classList.add('hidden');document.getElementById('auth-signup-options').classList.add('hidden')};
+window.showSignupOptions=function(){document.getElementById('auth-gate').classList.add('hidden');document.getElementById('auth-login-options').classList.add('hidden');document.getElementById('auth-signup-options').classList.remove('hidden')};
+window.hideSignupOptions=function(){document.getElementById('auth-gate').classList.remove('hidden');document.getElementById('auth-login-options').classList.add('hidden');document.getElementById('auth-signup-options').classList.add('hidden')};
+window.openSignup=function(){showSignupOptions()};
 async function getAccountNick(u){
   if(!u)return '';
   try{const v=await restJson('/usernames/'+encodeURIComponent(u));return (v&&v.nickname)?v.nickname:''}catch(e){return ''}
@@ -796,10 +809,11 @@ window.confirmNickname=async function(){
   showScreen('screen-start');
 };
 window.updateStartUI=function(){
-  const gate=document.getElementById('auth-gate'),options=document.getElementById('auth-login-options'),menu=document.getElementById('quiz-menu');
+  const gate=document.getElementById('auth-gate'),options=document.getElementById('auth-login-options'),signupOptions=document.getElementById('auth-signup-options'),menu=document.getElementById('quiz-menu');
   const logged=!!authUser;
   gate.classList.toggle('hidden',logged);
   options.classList.add('hidden');
+  signupOptions.classList.add('hidden');
   menu.classList.toggle('hidden',!logged);
   const note=document.getElementById('login-note');
   if(note)note.textContent=authUser?((authUser.email||'(구글 계정)')+' · 로그인됨'):'';
@@ -904,6 +918,25 @@ window.googleLogin=async function(){
     else if(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request'){}
     else if(c==='auth/unauthorized-domain'||c==='auth/operation-not-allowed')alert('Firebase 콘솔에서 구글 로그인을 활성화하고 인증 도메인에 "'+location.hostname+'" 를 추가해주세요.');
     else alert('구글 로그인 실패: '+(e.message||c));
+  }
+};
+window.googleSignup=async function(){
+  pendingSignup=true;
+  try{
+    await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
+    const u=firebase.auth().currentUser;
+    if(u){
+      try{await db.ref('registered/'+u.uid).set({at:Date.now()})}catch(e){console.warn('가입 기록 저장 실패:',e)}
+      fsSet('users',u.uid,{email:u.email,registered:true});
+    }
+  }catch(e){
+    const c=e.code||'';
+    if(c==='auth/popup-blocked')alert('팝업이 차단되었습니다. 주소창의 팝업 차단을 허용한 뒤 다시 시도해주세요.');
+    else if(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request'){}
+    else if(c==='auth/unauthorized-domain'||c==='auth/operation-not-allowed')alert('Firebase 콘솔에서 구글 로그인을 활성화하고 인증 도메인에 "'+location.hostname+'" 를 추가해주세요.');
+    else alert('구글 회원가입 실패: '+(e.message||c));
+  }finally{
+    pendingSignup=false;
   }
 };
 window.togglePwVis=function(id){
