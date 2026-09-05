@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>상식퀴즈 챌린지</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%23f7971e'/><stop offset='1' stop-color='%23ffd200'/></linearGradient></defs><rect width='512' height='512' rx='110' fill='url(%23g)'/><path fill='%23100f29' d='M285 150q-58 0-95.5 34T152 273q0 55 37.5 88.5T288 395q32 0 58.6-11.3T394 358l-30-47q-23 21-78 21-28 0-48-13t-30-35q-12-28-12-53t12-54q10-22 30-35t48-13q31 0 46 12.6T364 151l-34-1z'/><circle cx='238' cy='297' r='14' fill='%23100f29'/><circle cx='272' cy='297' r='14' fill='%23100f29'/><path fill='%23100f29' d='M295 320q-17 10-39 10t-39-10l-12 25q16 11 51 11t51-11l-12-25z'/></svg>">
+<meta name="theme-color" content="#f7971e">
+<title>퀴즈 챌린지</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);min-height:100vh;color:#fff;display:flex;justify-content:center;align-items:center}
@@ -127,6 +129,10 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .pw-wrap input{flex:1;padding-right:46px;text-align:left !important;letter-spacing:2px}
 .pw-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;color:#aaa;font-size:1em;cursor:pointer;padding:8px;opacity:.7}
 .pw-eye:hover{opacity:1;color:#ffd200}
+.pw-eye svg{display:block}
+.pw-eye .pw-eye-slash{display:none}
+.pw-eye.show .pw-eye-open{display:none}
+.pw-eye.show .pw-eye-slash{display:block}
 .modal-toggle{color:#9db8ff;font-size:.85em;margin-top:14px;cursor:pointer;text-decoration:underline}
 .modal-toggle:hover{color:#ffd200}
 .link-btn{background:none;border:0;color:#aaa;font-size:.95em;text-decoration:underline;text-underline-offset:4px;text-decoration-color:#555;cursor:pointer;padding:8px 16px}
@@ -438,14 +444,20 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
         <label for="em-pw" id="em-pw-label">비밀번호</label>
         <div class="pw-wrap">
           <input type="password" id="em-pw" placeholder="비밀번호" autocomplete="off">
-          <button type="button" class="pw-eye" onclick="togglePwVis('em-pw')" aria-label="비밀번호 보기">👁</button>
+          <button type="button" class="pw-eye" onclick="togglePwVis('em-pw')" aria-label="비밀번호 보기">
+            <svg class="pw-eye-open" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            <svg class="pw-eye-slash" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/><line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+          </button>
         </div>
       </div>
       <div class="input-group hidden" id="em-pw2-group" style="text-align:left;margin:10px 0">
         <label for="em-pw2">비밀번호 확인</label>
         <div class="pw-wrap">
           <input type="password" id="em-pw2" placeholder="비밀번호 한번 더" autocomplete="off">
-          <button type="button" class="pw-eye" onclick="togglePwVis('em-pw2')" aria-label="비밀번호 보기">👁</button>
+          <button type="button" class="pw-eye" onclick="togglePwVis('em-pw2')" aria-label="비밀번호 보기">
+            <svg class="pw-eye-open" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+            <svg class="pw-eye-slash" viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/><line x1="3" y1="3" x2="21" y2="21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+          </button>
         </div>
       </div>
       <button class="btn btn-primary" style="width:100%;margin-top:14px" id="email-modal-btn" onclick="emailLogin()">로그인</button>
@@ -941,7 +953,11 @@ window.googleSignup=async function(){
 };
 window.togglePwVis=function(id){
   const inp=document.getElementById(id);
-  inp.type=inp.type==='password'?'text':'password';
+  const btn=inp.parentElement.querySelector('.pw-eye');
+  const show=inp.type==='password';
+  inp.type=show?'text':'password';
+  btn.classList.toggle('show',show);
+  btn.setAttribute('aria-label',show?'비밀번호 숨기기':'비밀번호 보기');
 };
 window.openEmailLogin=function(mode){
   emailMode=(mode==='signup')?'signup':'login';
@@ -959,8 +975,11 @@ window.renderEmailModeUI=function(){
   document.getElementById('email-modal-btn').textContent=signup?'가입하기':'로그인';
   document.getElementById('email-mode-btn').textContent=signup?'이미 계정이 있나요? 로그인':'아직 계정이 없나요? 회원가입';
   document.getElementById('em-pw2-group').classList.toggle('hidden',!signup);
-  const pwInp=document.getElementById('em-pw');
-  if(!signup)pwInp.type='password';
+  ['em-pw','em-pw2'].forEach(id=>{
+    document.getElementById(id).type='password';
+    const btn=document.getElementById(id).parentElement.querySelector('.pw-eye');
+    if(btn){btn.classList.remove('show');btn.setAttribute('aria-label','비밀번호 보기')}
+  });
 };
 window.closeEmailLogin=function(){document.getElementById('email-modal').classList.add('hidden')};
 window.toggleEmailMode=function(){
