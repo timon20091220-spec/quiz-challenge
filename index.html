@@ -263,6 +263,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
     </div>
     <div id="mymenu-admin" class="hidden" style="margin-top:16px;display:flex;flex-direction:column;align-items:center;gap:8px">
       <p style="color:#aaa;font-size:.9em">관리자 · 퀴즈 잠금 해제</p>
+      <button class="btn btn-secondary lock-ctl" id="adm-lock-common" style="width:min(92%,300px)" onclick="toggleQuizLock('common')">상식 퀴즈</button>
       <button class="btn btn-secondary lock-ctl" id="adm-lock-ajaeggae" style="width:min(92%,300px)" onclick="toggleQuizLock('ajaeggae')">아재개그 퀴즈</button>
       <button class="btn btn-secondary lock-ctl" id="adm-lock-history" style="width:min(92%,300px)" onclick="toggleQuizLock('history')">역사 퀴즈</button>
     </div>
@@ -869,23 +870,22 @@ function renderQuizButtons(){
   wrap.innerHTML=html;
 }
 function isQuizLocked(qid){
-  if(qid==='common')return false;
   const u=window.__qLocks||{};
-  return !(u[qid]===true);
+  return u[qid]==='closed';
 }
 function renderLockButtons(){
-  ['ajaeggae','history'].forEach(qid=>{
+  [['common','상식'],['ajaeggae','아재개그'],['history','역사']].forEach(([qid,label])=>{
     const b=document.getElementById('adm-lock-'+qid);
     if(!b)return;
     const locked=isQuizLocked(qid);
-    b.textContent=(locked?'🔒 ':('🔓 '))+(qid==='ajaeggae'?'아재개그':'역사')+' 퀴즈 '+(locked?'(잠김)':'(열림)');
+    b.textContent=(locked?'🔒 ':('🔓 '))+label+' 퀴즈 '+(locked?'(잠김)':'(열림)');
     b.style.borderColor=locked?'rgba(255,255,255,.15)':'#4caf50';
     b.style.color=locked?'#ccc':'#4caf50';
   });
 }
 window.toggleQuizLock=function(qid){
   if(!isAdmin){alert('관리자만 사용할 수 있습니다.');return}
-  const next=isQuizLocked(qid)?true:false;
+  const next=isQuizLocked(qid)?'open':'closed';
   db.ref('locks/'+qid).set(next).catch(()=>{});
 };
 window.openQuizLobby=function(qid){
