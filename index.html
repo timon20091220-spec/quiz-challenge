@@ -511,7 +511,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-const APP_VER='v14';
+const APP_VER='v15';
 (function(){try{var m=(location.search||'').match(/[?&]v=([^&]*)/);if(!m||decodeURIComponent(m[1])!==APP_VER)location.replace(location.pathname+'?v='+APP_VER)}catch(e){}})();
 window.__dbgErrs=[];
 function showDbg(msg){
@@ -611,6 +611,7 @@ const ajaeggaeQuestions=[
 ];
 
 let curQuizId='common',adminQuiz='common',authUser=null,isAdmin=false,questCache={},emailMode='login';
+let quizNoLimit=false;
 
 function fsGetDoc(col,id){
   if(!fsReady)return Promise.resolve(null);
@@ -649,6 +650,41 @@ function fsInc(col,docId,obj){
   const data={};
   Object.keys(obj).forEach(k=>data[k]=inc);
   return fs.collection(col).doc(docId).set(data,{merge:true}).catch(()=>{});
+}
+function fsParseValue(v){
+  if(v===null||v===undefined)return null;
+  if(v.stringValue!==undefined)return v.stringValue;
+  if(v.integerValue!==undefined)return Number(v.integerValue);
+  if(v.doubleValue!==undefined)return Number(v.doubleValue);
+  if(v.booleanValue!==undefined)return v.booleanValue;
+  if(v.timestampValue!==undefined)return v.timestampValue;
+  if(v.mapValue!==undefined){const o={};const f=v.mapValue.fields||{};Object.keys(f).forEach(k=>o[k]=fsParseValue(f[k]));return o}
+  if(v.arrayValue!==undefined)return (v.arrayValue.values||[]).map(fsParseValue);
+  return null;
+}
+async function fsRestGet(path){
+  try{
+    const url='https://firestore.googleapis.com/v1/projects/quiz-ranking-6cb9f/databases/(default)/documents/'+path+'?key=AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k';
+    const r=await withTimeout(fetch(url),4500);
+    if(!r.ok)return null;
+    const j=await r.json();
+    const o={id:(j.name||'').split('/').pop()};
+    Object.keys(j.fields||{}).forEach(k=>o[k]=fsParseValue(j.fields[k]));
+    return o;
+  }catch(e){return null}
+}
+async function fsRestList(path){
+  try{
+    const url='https://firestore.googleapis.com/v1/projects/quiz-ranking-6cb9f/databases/(default)/documents/'+path+'?pageSize=200&key=AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k';
+    const r=await withTimeout(fetch(url),4500);
+    if(!r.ok)return null;
+    const j=await r.json();
+    return (j.documents||[]).map(d=>{
+      const o={id:(d.name||'').split('/').pop()};
+      Object.keys(d.fields||{}).forEach(k=>o[k]=fsParseValue(d.fields[k]));
+      return o;
+    });
+  }catch(e){return null}
 }
 
 function normalize(s){
@@ -1154,7 +1190,9 @@ window.showMyRecords=async function(){
 async function fetchPlayerAttempts(nick,qid){
   if(!fsReady)return [];
   const safe=(nick||'empty').replace(/[\/.]+$/,'').replace(/[\/.]/g,'_');
-  const d=await fsGetDoc('players',safe);
+  let d=await withTimeout(fsGetDoc('players',safe),3500).catch(()=>undefined);
+  if(d===undefined)d=await fsRestGet('players/'+encodeURIComponent(safe));
+  if(d===undefined||d===null)d={};
   const attempts=(d&&d.attempts)||[];
   const arr=attempts.filter(v=>v&&v.nickname===nick&&(v.quiz||'common')===qid).map(v=>({key:String(v.date),val:v}));
   arr.sort((a,b)=>a.val.date-b.val.date);
@@ -1186,7 +1224,7 @@ window.renderRecordCats=async function(){
 function groupAttempts(arr){
   const byDate=new Map();
   arr.forEach(r=>{
-    const d=String(r.val.date);
+    const d=String(r.val.run||r.val.date);
     if(!byDate.has(d))byDate.set(d,[]);
     byDate.get(d).push(r);
   });
@@ -1281,7 +1319,10 @@ window.startQuiz=async function(qid){
     shuffle(currentQuiz);
   }
   currentIdx=0;score=0;answered=false;selectedOption=-1;timeLeft=1800;startTime=Date.now();clearInterval(qTimerInterval);attemptLog=[];
-  showScreen('screen-quiz');renderQuestion();startTimer();
+  quizNoLimit=(qid==='ajaeggae');
+  showScreen('screen-quiz');
+  document.getElementById('timer').classList.toggle('hidden',quizNoLimit);
+  renderQuestion();
 };
 
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}}
@@ -1357,8 +1398,14 @@ function renderQuestion(){
   answered=false;selectedOption=-1;q.userWrong=false;
   document.getElementById('q-counter').textContent=`${currentIdx+1} / ${total}`;
   document.getElementById('progress-fill').style.width=`${(currentIdx/total)*100}%`;
-  startQTimer();
-  startTimer();
+  if(quizNoLimit){
+    clearInterval(qTimerInterval);
+    const qel=document.getElementById('q-timer');
+    qel.textContent='∞';qel.classList.remove('danger');
+  }else{
+    startQTimer();
+    startTimer();
+  }
 let badge='';
   if(q.cat==='역사')badge='<span class="q-category cat-history">역사</span>';
   else if(q.cat==='과학')badge='<span class="q-category cat-science">과학</span>';
@@ -1474,32 +1521,16 @@ async function finishQuiz(){
   }else{rw.classList.add('hidden')}
   if(firebaseReady){
     (async()=>{
-      let saved=false;
-      try{
-const rows=await fsGetAll('rankings/'+curQuizId+'/records');
-        let exists=false;
-        rows.forEach(v=>{if(v&&v.nickname===nickname)exists=true});
-        if(exists){
-          // 이미 같은 닉네임이 기록되어 있으면 무시 (첫 번째 것만 기록 유지)
-          console.log('이미 랭킹에 등록된 닉네임입니다. 첫 기록이 유지됩니다.');
-}else{
-          fsSet('rankings',curQuizId,{quiz:curQuizId,updated:Date.now()},{merge:true});
-          fsSet('rankings/'+curQuizId+'/records',(nickname+'_'+Date.now()).replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),{quiz:curQuizId,uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
-          saved=true;
-        }
-      }catch(e){console.warn('랭킹 저장 실패:',e)}
-      try{
-        attemptLog.forEach(a=>fsInc('qstats',curQuizId+'_'+statKey(a.t,a.c),{tries:1,wrong:a.wrong?1:0}));
-      }catch(e){console.warn('문항 통계 저장 실패:',e)}
+      const now=Date.now();
+      const runId=now.toString(36)+Math.random().toString(36).slice(2,6);
       try{
         const logMap={};attemptLog.forEach(a=>logMap[a.id]=a);
-        const now=Date.now();
         const playerDocs=[];
         currentQuiz.forEach(q=>{
           const a=logMap[q.id];
           if(!a)return;
           const correctAnswer=q.t==='객관식'?q.o[q.a]:q.a[0];
-          playerDocs.push({quiz:curQuizId,uid:uid,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
+          playerDocs.push({quiz:curQuizId,uid:uid,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now,run:runId});
         });
         if(playerDocs.length&&fsReady){
           const arrU=firebase.firestore.FieldValue.arrayUnion;
@@ -1507,6 +1538,22 @@ const rows=await fsGetAll('rankings/'+curQuizId+'/records');
             {attempts:arrU(...playerDocs),quiz:curQuizId,last:now},{merge:true});
         }
       }catch(e){console.warn('답안 기록 저장 실패:',e)}
+      try{
+        attemptLog.forEach(a=>fsInc('qstats',curQuizId+'_'+statKey(a.t,a.c),{tries:1,wrong:a.wrong?1:0}));
+      }catch(e){console.warn('문항 통계 저장 실패:',e)}
+      let saved=false;
+      try{
+        let rows=await withTimeout(fsGetAll('rankings/'+curQuizId+'/records'),3500).catch(()=>undefined);
+        if(rows===undefined)rows=await fsRestList('rankings/'+curQuizId+'/records');
+        if(rows===undefined||rows===null)rows=[];
+        let exists=false;
+        rows.forEach(v=>{if(v&&v.nickname===nickname)exists=true});
+        if(!exists){
+          fsSet('rankings',curQuizId,{quiz:curQuizId,updated:Date.now()},{merge:true});
+          fsSet('rankings/'+curQuizId+'/records',(nickname+'_'+Date.now()).replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),{quiz:curQuizId,uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
+          saved=true;
+        }
+      }catch(e){console.warn('랭킹 저장 실패:',e)}
       if(saved)loadRanking('ranking-result-wrap',pct,curQuizId);
     })();
   }
@@ -1571,7 +1618,9 @@ async function loadPlayers(qid){
   wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
-const rows=await fsGetAll('rankings/'+qid+'/records');
+    let rows=await withTimeout(fsGetAll('rankings/'+qid+'/records'),3500).catch(()=>undefined);
+    if(rows===undefined)rows=await fsRestList('rankings/'+qid+'/records');
+    if(rows===undefined||rows===null){wrap.innerHTML='<p style="color:#aaa;padding:20px">불러오기가 지연돼요. 나갔다가 다시 눌러주세요</p>';return}
     let data=[];
     rows.forEach(v=>{if(v&&typeof v==='object'&&typeof v.score==='number')data.push({key:v.id,val:v})});
     const seen={};data.forEach(r=>{const e=seen[r.val.nickname];if(!e||((r.val.date||0)<(e.val.date||0)))seen[r.val.nickname]=r});
@@ -1612,7 +1661,7 @@ const arr=await fetchPlayerAttempts(nick,qid);
     }
     const byDate=new Map();
     data.forEach(r=>{
-      const k=String(r.val.date);
+      const k=String(r.val.run||r.val.date);
       if(!byDate.has(k))byDate.set(k,[]);
       byDate.get(k).push(r);
     });
