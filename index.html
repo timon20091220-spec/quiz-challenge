@@ -175,9 +175,10 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
     </div>
     <div id="quiz-menu" class="hidden" style="margin-top:18px">
       <div id="nick-wrap" class="hidden" style="margin-bottom:20px">
-        <div class="input-group" style="text-align:center">
-          <label for="nickname">닉네임</label>
-          <input type="text" id="nickname" placeholder="닉네임을 입력하세요" maxlength="20" autocomplete="off" readonly onfocus="this.removeAttribute('readonly')" onblur="saveNickname()">
+        <p style="color:#aaa;font-size:.9em;margin-bottom:6px">나의 닉네임</p>
+        <div style="display:flex;align-items:center;justify-content:center;gap:10px">
+          <span id="nick-display" style="font-weight:800;font-size:1.3em;color:#ffd200"></span>
+          <button class="btn btn-secondary" style="padding:6px 12px;font-size:.8em" onclick="openNicknameSetup()">변경</button>
         </div>
       </div>
       <div id="quiz-btns" style="display:flex;flex-direction:column;align-items:center;gap:10px"></div>
@@ -186,6 +187,19 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
         <button class="btn btn-secondary" style="margin:0;padding:10px 18px;font-size:.9em" onclick="showRankingOnly()">랭킹 보기</button>
         <button id="admin-btn" class="btn btn-secondary hidden" style="margin:0;padding:10px 18px;font-size:.9em" onclick="showAnalysis()">관리자 · 문항 분석</button>
       </div>
+    </div>
+  </div>
+  <div id="screen-nickname" class="screen hidden">
+    <div class="logo" style="font-size:2.2em">닉네임 설정</div>
+    <p style="color:#aaa;margin:10px 0 16px;line-height:1.6">이 계정에서 사용할 닉네임을 정해주세요.<br>랭킹·기록에 이 이름으로 표시되며,<br>다른 기기에서 로그인해도 유지됩니다.</p>
+    <div class="input-group" style="text-align:center;width:min(92%,360px)">
+      <input type="text" id="nickname-set" placeholder="닉네임 (최대 20자)" maxlength="20" autocomplete="off" onkeydown="if(event.key==='Enter')confirmNickname()">
+    </div>
+    <div style="margin-top:16px">
+      <button class="btn btn-primary" onclick="confirmNickname()">확인</button>
+    </div>
+    <div style="margin-top:18px">
+      <button class="btn btn-secondary" style="padding:8px 16px;font-size:.85em" onclick="logout()">계정 바꾸기</button>
     </div>
   </div>
   <div id="screen-quiz-lobby" class="screen hidden">
@@ -237,9 +251,13 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
       <h3 style="margin-bottom:15px">오답 문제 확인</h3>
       <div id="review-list"></div>
     </div>
-    <div class="ranking-card">
+<div class="ranking-card">
       <h3 style="margin-bottom:15px">실시간 랭킹</h3>
       <div id="ranking-result-wrap"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+    <div style="text-align:center;margin-top:15px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="startQuiz(curQuizId)">다시 도전</button>
+      <button class="btn btn-secondary" onclick="openQuizLobby(curQuizId)">로비로 돌아가기</button>
     </div>
   </div>
 <div id="screen-ranking" class="screen hidden">
@@ -657,15 +675,35 @@ function getQuestionPool(qid){
   return out;
 }
 
-window.saveNickname=function(){
-  const inp=document.getElementById('nickname');
-  inp.value=inp.value.trim();
-  nickname=inp.value;
-  try{localStorage.setItem('quiz_nickname',nickname)}catch(e){}
+let uid='';
+async function getAccountNick(u){
+  if(!u)return '';
+  try{const v=await restJson('/usernames/'+encodeURIComponent(u));return (v&&v.nickname)?v.nickname:''}catch(e){return ''}
+}
+function applyNicknameUI(){
+  document.getElementById('nick-display').textContent=nickname||'';
+  const t=document.getElementById('records-title');
+  if(t&&nickname)t.textContent=nickname+' 님의 기록';
+  if(document.getElementById('records-sub'))document.getElementById('records-sub').textContent=nickname?(nickname+' 님의 플레이 기록 · 시도 횟수대로 1차, 2차... 순서로 표시됩니다'):'';
+}
+window.openNicknameSetup=function(){
+  document.getElementById('nickname-set').value=nickname||'';
+  showScreen('screen-nickname');
+  setTimeout(()=>{const i=document.getElementById('nickname-set');i.focus();i.select()},50);
 };
-window.nicknameChanged=function(){
-  saveNickname();
-  refreshRecordsSub();
+window.confirmNickname=async function(){
+  const nick=document.getElementById('nickname-set').value.trim().replace(/\s+/g,' ');
+  if(!nick){alert('닉네임을 입력해주세요.');return}
+  nickname=nick;
+  if(uid){
+    try{
+      await db.ref('usernames/'+uid).set({nickname:nick,update:Date.now()});
+      fsSet('users',uid,{nickname:nick});
+    }catch(e){console.warn('닉네임 저장 실패:',e)}
+  }
+  applyNicknameUI();
+  updateStartUI();
+  showScreen('screen-start');
 };
 window.updateStartUI=function(){
   const pre=document.getElementById('auth-pre'),post=document.getElementById('auth-post'),menu=document.getElementById('quiz-menu');
@@ -675,14 +713,9 @@ window.updateStartUI=function(){
   if(authUser){
     document.getElementById('auth-email').textContent=authUser.email||'(구글 계정)';
     document.getElementById('auth-badge').textContent=isAdmin?'· 관리자':'';
-    const nw=document.getElementById('nick-wrap');
-    nw.classList.remove('hidden');
-    const nickInput=document.getElementById('nickname');
-    if(!nickInput.value){
-      try{nickInput.value=localStorage.getItem('quiz_nickname')||''}catch(e){}
-      nickname=nickInput.value;
-    }
+    document.getElementById('nick-wrap').classList.remove('hidden');
     document.getElementById('admin-btn').classList.toggle('hidden',!isAdmin);
+    applyNicknameUI();
     renderQuizButtons();
   }
 };
@@ -705,7 +738,7 @@ window.openQuizLobby=function(qid){
   const def=QUIZ_LIST.find(q=>q.id===curQuizId)||QUIZ_LIST[0];
   document.getElementById('ql-logo').textContent=def.title;
   document.getElementById('ql-desc').textContent=def.desc;
-  document.getElementById('ql-user').textContent=(nickname||document.getElementById('nickname').value.trim())?( (nickname||document.getElementById('nickname').value.trim())+' 님' ):'';
+  document.getElementById('ql-user').textContent=nickname?(nickname+' 님'):'';
   showScreen('screen-quiz-lobby');
 };
 function init(){
@@ -713,11 +746,23 @@ function init(){
   ensureQuest('common');
   showScreen('screen-start');
   updateStartUI();
-  try{
+try{
     firebase.auth().onAuthStateChanged(user=>{
       authUser=user||null;
       isAdmin=!!user&&user.email===ADMIN_EMAIL;
-      updateStartUI();
+      uid=user?user.uid:'';
+      if(user){
+        (async()=>{
+          const stored=await getAccountNick(uid);
+          if(stored!=='')nickname=stored;
+          updateStartUI();
+          if(stored==='')showScreen('screen-nickname');
+        })();
+      }else{
+        nickname='';
+        updateStartUI();
+        showScreen('screen-start');
+      }
     });
   }catch(e){}
 }
@@ -777,16 +822,10 @@ window.showRankingOnly=function(qid){
 window.rankQuizChanged=function(){
   loadRanking('ranking-standalone-wrap',null,document.getElementById('rank-qsel').value);
 };
-window.refreshRecordsSub=function(){
-  const el=document.getElementById('records-sub');
-  if(!el)return;
-  const nick=document.getElementById('nickname').value.trim();
-  if(nick)el.textContent=nick+' 님의 플레이 기록 · 시도 횟수대로 1차, 2차... 순서로 표시됩니다';
-};
+window.refreshRecordsSub=function(){applyNicknameUI()};
 window.showMyRecords=async function(){
-  const nick=document.getElementById('nickname').value.trim();
-  if(!nick){alert('닉네임을 먼저 입력해주세요.');return}
-  nickname=nick;
+  const nick=nickname;
+  if(!nick){alert('닉네임 설정이 필요합니다. 로비에서 변경 버튼을 눌러 닉네임을 정해주세요.');return}
   document.getElementById('records-title').textContent=nick+' 님의 기록';
   refreshRecordsSub();
   showScreen('screen-records');
@@ -848,8 +887,7 @@ window.showRecordGroup=function(gi){
 window.startQuiz=async function(qid){
   qid=qid||curQuizId;
   curQuizId=qid;
-  nickname=document.getElementById('nickname').value.trim();
-  if(!nickname){alert('닉네임을 입력해주세요.');return}
+  if(!nickname){alert('닉네임 설정 후 퀴즈를 시작할 수 있습니다. 로비에서 변경 버튼을 눌러 닉네임을 정해주세요.');openNicknameSetup();return}
   await ensureQuest(qid);
   const pool=getQuestionPool(qid);
   if(pool.length===0){alert('이 퀴즈에 문제가 없습니다.');return}
@@ -1031,8 +1069,8 @@ async function finishQuiz(){
           // 이미 같은 닉네임이 기록되어 있으면 무시 (첫 번째 것만 기록 유지)
           console.log('이미 랭킹에 등록된 닉네임입니다. 첫 기록이 유지됩니다.');
 }else{
-          await db.ref(rankNodePath(curQuizId)).push({nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
-          fsAdd('rankings',{quiz:curQuizId,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
+          await db.ref(rankNodePath(curQuizId)).push({uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
+          fsAdd('rankings',{quiz:curQuizId,uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
           saved=true;
         }
       }catch(e){console.warn('랭킹 저장 실패:',e)}
@@ -1054,8 +1092,8 @@ async function finishQuiz(){
           const a=logMap[q.id];
           if(!a)return Promise.resolve();
           const correctAnswer=q.t==='객관식'?q.o[q.a]:q.a[0];
-          fsAdd('qlog',{quiz:curQuizId,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
-          return qlRef.push({quiz:curQuizId,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
+          fsAdd('qlog',{quiz:curQuizId,uid:uid,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
+          return qlRef.push({quiz:curQuizId,uid:uid,nickname:nickname,cat:q.cat,q:q.q,userAns:a.ans,correctAnswer:correctAnswer,correct:!a.wrong,date:now});
         });
         await Promise.allSettled(writes);
       }catch(e){console.warn('답안 기록 저장 실패:',e)}
