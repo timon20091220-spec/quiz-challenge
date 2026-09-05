@@ -511,7 +511,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-const APP_VER='v13';
+const APP_VER='v14';
 (function(){try{var m=(location.search||'').match(/[?&]v=([^&]*)/);if(!m||decodeURIComponent(m[1])!==APP_VER)location.replace(location.pathname+'?v='+APP_VER)}catch(e){}})();
 window.__dbgErrs=[];
 function showDbg(msg){
@@ -1339,6 +1339,7 @@ function startQTimer(){
 }
 function handleTimeout(){
   if(answered)return;
+  clearInterval(timerInterval);
   const q=currentQuiz[currentIdx],isObj=q.t==='객관식';
 answered=true;q.userWrong=true;score=score;attemptLog.push({id:q.id,wrong:true,t:q.q,c:q.cat});
   sfx('wrong');
@@ -1357,6 +1358,7 @@ function renderQuestion(){
   document.getElementById('q-counter').textContent=`${currentIdx+1} / ${total}`;
   document.getElementById('progress-fill').style.width=`${(currentIdx/total)*100}%`;
   startQTimer();
+  startTimer();
 let badge='';
   if(q.cat==='역사')badge='<span class="q-category cat-history">역사</span>';
   else if(q.cat==='과학')badge='<span class="q-category cat-science">과학</span>';
@@ -1393,6 +1395,7 @@ let badge='';
 window.submitAnswer=function(){
   if(answered)return;
   clearInterval(qTimerInterval);
+  clearInterval(timerInterval);
   const q=currentQuiz[currentIdx],isObj=q.t==='객관식';
   const logAttempt=(wrong,ans)=>attemptLog.push({id:q.id,wrong,ans:ans||'',t:q.q,c:q.cat});
   if(isObj){
