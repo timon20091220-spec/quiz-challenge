@@ -649,7 +649,6 @@ function init(){
     });
   }catch(e){}
 }
-async function init(){}
 window.googleLogin=async function(){
   try{
     await firebase.auth().signInWithPopup(new firebase.auth.GoogleAuthProvider());
