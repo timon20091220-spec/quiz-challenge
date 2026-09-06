@@ -512,7 +512,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-const APP_VER='v18';
+const APP_VER='v20';
 (function(){try{var m=(location.search||'').match(/[?&]v=([^&]*)/);if(!m||decodeURIComponent(m[1])!==APP_VER)location.replace(location.pathname+'?v='+APP_VER)}catch(e){}})();
 window.__dbgErrs=[];
 function showDbg(msg){
@@ -686,6 +686,32 @@ async function fsRestList(path){
       return o;
     });
   }catch(e){return null}
+}
+async function fsRestPatch(path,fields){
+  try{
+    const f={};
+    Object.keys(fields||{}).forEach(k=>{
+      const v=fields[k];
+      if(typeof v==='boolean')f[k]={booleanValue:v};
+      else if(typeof v==='number')f[k]={integerValue:String(v)};
+      else f[k]={stringValue:String(v)};
+    });
+    const url='https://firestore.googleapis.com/v1/projects/quiz-ranking-6cb9f/databases/(default)/documents/'+path+'?key=AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k';
+    const r=await withTimeout(fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:f})}),4500);
+    return r.ok;
+  }catch(e){return false}
+}
+async function accountsProbe(uid){
+  try{
+    const url='https://firestore.googleapis.com/v1/projects/quiz-ranking-6cb9f/databases/(default)/documents/accounts/'+encodeURIComponent(uid)+'?key=AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k';
+    const r=await withTimeout(fetch(url),4000);
+    if(r.status===404)return null;
+    if(!r.ok)return undefined;
+    const j=await r.json();
+    const o={};
+    Object.keys(j.fields||{}).forEach(k=>o[k]=fsParseValue(j.fields[k]));
+    return o;
+  }catch(e){return undefined}
 }
 
 function normalize(s){
@@ -903,7 +929,8 @@ window.confirmNickname=async function(){
     if(cur){alert('닉네임은 변경할 수 없습니다.');showScreen('screen-start');return}
     if(await nicknameTaken(nick,uid)){alert('이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.');return}
     try{
-      await fsSet('accounts',uid,{nickname:nick,update:Date.now()});
+      await fsSet('accounts',uid,{nickname:nick,registered:true,update:Date.now()});
+      fsRestPatch('accounts/'+encodeURIComponent(uid),{nickname:nick,registered:true});
       fsSet('users',nick.replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),{uid:uid,email:authUser?authUser.email:'',nickname:nick,registered:true});
     }catch(e){console.warn('닉네임 저장 실패:',e)}
   }
@@ -1012,11 +1039,11 @@ function init(){
           let registered=true;
           if(!pendingSignup){
             try{
-              registered=!!(await fsGetDoc('accounts',uid).then(a=>a&&a.registered));
-              if(!registered){
-                const nick=await getAccountNick(uid);
-                if(nick!=='')registered=true;
-              }
+              let a=await withTimeout(fsGetDoc('accounts',uid),3000).catch(()=>undefined);
+              if(a===undefined||a===null)a=await accountsProbe(uid);
+              if(a===undefined){registered=true}
+              else if(a===null){registered=false}
+              else{registered=!!a.registered||!!a.nickname}
             }catch(e){registered=true}
           }
           if(!registered){
@@ -1026,7 +1053,6 @@ function init(){
               setTimeout(()=>{gateAlerted=false},1200);
             }
             stopSessionWatch();
-            try{await user.delete()}catch(e){console.warn('미가입 계정 삭제 실패:',e)}
             try{await firebase.auth().signOut()}catch(e){}
             updateStartUI();
             routeAfterAuth();
@@ -1134,7 +1160,8 @@ window.emailLogin=async function(){
       await firebase.auth().createUserWithEmailAndPassword(email,pw);
       const u=firebase.auth().currentUser;
       if(u){
-try{await fsSet('accounts',u.uid,{registered:true},{merge:true})}catch(e){console.warn('가입 기록 저장 실패:',e)}
+        try{await fsSet('accounts',u.uid,{registered:true},{merge:true})}catch(e){console.warn('가입 기록 저장 실패:',e)}
+        try{await fsRestPatch('accounts/'+encodeURIComponent(u.uid),{registered:true})}catch(e){}
       }
       pendingSignup=false;
       gateAlerted=false;
@@ -1552,13 +1579,9 @@ async function finishQuiz(){
         if(rows===undefined||rows===null)rows=[];
         let mine=null;
         rows.forEach(v=>{if(v&&v.nickname===nickname&&v.id)mine=v});
-        const rec={quiz:curQuizId,uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()};
         if(!mine){
           fsSet('rankings',curQuizId,{quiz:curQuizId,updated:Date.now()},{merge:true});
-          fsSet('rankings/'+curQuizId+'/records',(nickname+'_'+Date.now()).replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),rec);
-          saved=true;
-        }else if(pct>(mine.score||0)){
-          fsSet('rankings/'+curQuizId+'/records',mine.id,rec,{merge:true});
+          fsSet('rankings/'+curQuizId+'/records',(nickname+'_'+Date.now()).replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),{quiz:curQuizId,uid:uid,nickname:nickname,score:pct,correct:score,total:total,time:elapsed,date:Date.now()});
           saved=true;
         }
       }catch(e){console.warn('랭킹 저장 실패:',e)}
