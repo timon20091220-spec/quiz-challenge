@@ -160,6 +160,9 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .lock-tag{font-size:.72em;font-weight:600;color:#ddd;background:rgba(0,0,0,.4);padding:2px 10px;border-radius:10px}
 .quiz-chip-common{background:linear-gradient(135deg,#f7971e,#ffd200);color:#2d2a10}
 .quiz-chip-ajaeggae{background:linear-gradient(135deg,#2e8b3b,#7ed957);color:#0d3010}
+.quiz-chip-match{background:linear-gradient(135deg,#e64a19,#ff8a3c);color:#fff}
+.ms-held{display:flex;align-items:center;justify-content:center;gap:8px;color:#ffd200;font-weight:700;font-size:.9em;margin:6px 0}
+.match-goal{color:#ffd200;font-weight:700}
 .btn-my{background:linear-gradient(135deg,#ffd200,#f7971e);color:#2d2a10 !important;font-weight:800}
 .btn-rank{background:linear-gradient(135deg,#2996f3,#6a4ff7);font-weight:800}
 .qq-arrow{color:#ffd200;font-size:1.2em}
@@ -274,6 +277,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
       <p style="color:#aaa;font-size:.9em">관리자 · 퀴즈 잠금 해제</p>
       <button class="btn btn-secondary lock-ctl" id="adm-lock-common" style="width:min(92%,300px)" onclick="toggleQuizLock('common')">상식 퀴즈</button>
       <button class="btn btn-secondary lock-ctl" id="adm-lock-ajaeggae" style="width:min(92%,300px)" onclick="toggleQuizLock('ajaeggae')">아재개그 퀴즈</button>
+      <button class="btn btn-secondary lock-ctl" id="adm-lock-match" style="width:min(92%,300px)" onclick="toggleQuizLock('match')">성냥 수학 퀴즈</button>
     </div>
     <div style="margin-top:18px;display:flex;flex-direction:column;align-items:center;gap:10px">
       <button class="btn btn-primary" style="width:min(92%,300px)" onclick="showMyRecords()">내 기록 보기</button>
@@ -329,6 +333,43 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
       <button id="btn-next" class="btn btn-primary hidden" onclick="nextQuestion()">다음 문제</button>
     </div>
   </div>
+  <div id="screen-match" class="screen hidden">
+    <div class="quiz-header">
+      <span id="match-progress" class="q-num"></span>
+      <span id="match-timer" class="timer" style="color:#4caf50">0:00</span>
+      <button class="home-btn" onclick="matchQuit()" aria-label="홈으로" title="홈으로">🏠</button>
+    </div>
+    <div class="progress-bar"><div id="match-progress-fill" class="progress-fill"></div></div>
+    <div id="match-play">
+      <div class="question-card">
+        <p id="match-inst" class="question-text" style="font-size:.95em"></p>
+        <div id="match-svg" style="width:100%;display:flex;justify-content:center;padding:6px 0"></div>
+        <div id="match-held" class="ms-held hidden"></div>
+        <p id="match-msg" class="answer-result" style="min-height:1.5em"></p>
+        <button id="match-hint-btn" class="btn btn-secondary hidden" style="margin:2px auto;display:block;font-size:.85em;padding:8px 16px" onclick="matchToggleHint()">힌트 보기</button>
+        <p id="match-hint-text" class="explain-box hidden"></p>
+        <p style="color:#ccc;font-size:.92em">이동한 성냥: <span id="match-moves" class="match-goal">0</span>/<span id="match-required">1</span> · 목표 <span id="match-goal"></span></p>
+      </div>
+      <div class="nav-btns" style="flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="matchCheck()" style="margin:0">확인</button>
+        <button class="btn btn-secondary" onclick="matchResetPuzzle()" style="margin:0">되돌리기</button>
+        <button class="btn btn-secondary" onclick="matchSkip()" style="margin:0">건너뛰기</button>
+      </div>
+    </div>
+    <div id="match-done" class="hidden">
+      <div class="ranking-card">
+        <h2 style="color:#ffd200">성냥 퀴즈 완료!</h2>
+        <p style="color:#aaa;margin:6px 0 12px">5문제 푸는 데 걸린 시간</p>
+        <div class="score-circle"><span id="match-done-time" class="score-num">0</span><span class="score-label">초</span></div>
+        <p id="match-done-sub" style="color:#4caf50;font-weight:700;margin:10px 0"></p>
+        <div id="match-rank"><div class="loading"><div class="spinner"></div></div></div>
+      </div>
+      <div style="margin-top:14px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="startMatchGame()">다시 도전</button>
+        <button class="btn btn-secondary" onclick="goStart()">로비로</button>
+      </div>
+    </div>
+  </div>
   <div id="screen-result" class="screen hidden">
     <div class="result-card">
       <h2 id="result-title" style="margin-bottom:15px"></h2>
@@ -361,6 +402,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
       <div style="display:flex;justify-content:center;gap:8px;margin:14px 0;flex-wrap:wrap">
         <button id="rank-tab-common" class="rank-tab" onclick="showRankTab('common')">상식 퀴즈</button>
         <button id="rank-tab-ajaeggae" class="rank-tab" onclick="showRankTab('ajaeggae')">아재개그 퀴즈</button>
+        <button id="rank-tab-match" class="rank-tab" onclick="showRankTab('match')">성냥 수학</button>
       </div>
       <p style="color:#aaa;margin-bottom:12px;font-size:.9em">상위 50명</p>
       <div id="ranking-standalone-wrap"><div class="loading"><div class="spinner"></div></div></div>
@@ -391,6 +433,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
           <button id="tab-stats" class="tab-btn tab-active" onclick="showAnalysisTab('stats')">오답률 분석</button>
           <button id="tab-log" class="tab-btn" onclick="showAnalysisTab('log')">답안 기록</button>
           <button id="tab-quest" class="tab-btn" onclick="showAnalysisTab('quest')">문제 관리</button>
+          <button id="tab-match" class="tab-btn" onclick="showAnalysisTab('match')">성냥 문제</button>
         </div>
         <div id="analysis-controls" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:15px;justify-content:center;align-items:center">
           <select id="analysis-sort" class="analysis-select" onchange="renderAnalysis()">
@@ -457,6 +500,31 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
               <button class="btn btn-secondary" onclick="qMgrClose()">취소</button>
             </div>
           </div>
+        </div>
+        <div id="match-mgr-wrap" class="hidden" style="text-align:left">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px;flex-wrap:wrap">
+            <h3 style="margin:0">성냥 수학 문제</h3>
+            <span style="color:#aaa;font-size:.8em">플레이어는 5문제를 랜덤으로 풉니다</span>
+          </div>
+          <div style="margin-bottom:12px">
+            <button class="btn btn-primary" style="padding:10px 18px;font-size:.9em;margin:0" onclick="matchMgrToggleForm()">+ 성냥 문제 추가</button>
+          </div>
+          <div id="mm-form" class="quest-form hidden">
+            <h3 style="margin-bottom:4px">성냥 문제 추가</h3>
+            <p class="modal-sub" style="text-align:left;margin-bottom:12px">숫자와 기호(+, -, =)의 성냥을 모두 옮길 수 있어요.<br>아래처럼 이미 성립하는 수식은 문제가 안 됩니다.</p>
+            <label class="qf-label">수식 (숫자·+·-·=, 예: 6+4=4)</label>
+            <input id="mm-expr" class="qf-input" placeholder="예: 6+4=4" oninput="matchMgrPreview()" autocomplete="off">
+            <label class="qf-label">성냥 이동 수</label>
+            <input id="mm-moves" type="number" class="qf-input" value="1" min="1" max="3" style="width:140px">
+            <label class="qf-label">힌트 (선택)</label>
+            <input id="mm-hint" class="qf-input" placeholder="예: 6의 가운데 성냥을 옮겨보세요" autocomplete="off">
+            <div id="mm-preview" style="padding:6px 0"></div>
+            <div class="modal-btns" style="margin-top:10px">
+              <button class="btn btn-primary" onclick="matchPuzzleAdd()">저장</button>
+              <button class="btn btn-secondary" onclick="matchMgrToggleForm()">취소</button>
+            </div>
+          </div>
+          <div id="mm-list"></div>
         </div>
       </div>
     </div>
@@ -541,7 +609,8 @@ let fs,fsReady=false,firebaseReady=false;try{firebase.initializeApp(firebaseConf
 const ADMIN_EMAIL='timon20091220@gmail.com';
 const QUIZ_LIST=[
   {id:'common',title:'상식 퀴즈',icon:'💡',desc:'상·중·하 30문제 (상 10 · 중 15 · 하 5)'},
-  {id:'ajaeggae',title:'아재개그 퀴즈',icon:'😂',desc:'주관식 65문제 중 랜덤 32문제'}
+  {id:'ajaeggae',title:'아재개그 퀴즈',icon:'😂',desc:'주관식 65문제 중 랜덤 32문제'},
+  {id:'match',title:'성냥 수학 퀴즈',icon:'🔥',desc:'성냥 이동 5문제 · 빠른 시간 우승'}
 ];
 const ajaeggaeQuestions=[
 {q:"읽씹을 제일 많이 당하는 숫자는?",a:["구만씹오"],cat:"재밌는",e:"9만(구만)을 읽씹하면? 구만씹오!"},
@@ -965,7 +1034,7 @@ function isQuizLocked(qid){
   return u[qid]==='closed';
 }
 function renderLockButtons(){
-  [['common','상식'],['ajaeggae','아재개그']].forEach(([qid,label])=>{
+  [['common','상식'],['ajaeggae','아재개그'],['match','성냥']].forEach(([qid,label])=>{
     const b=document.getElementById('adm-lock-'+qid);
     if(!b)return;
     const locked=isQuizLocked(qid);
@@ -982,7 +1051,7 @@ window.toggleQuizLock=function(qid){
     const snap=await tx.get(ref);
     const cur=snap.exists?(snap.data()||{}):{};
     const norm=k=>(cur[k]==='closed'?'closed':'open');
-    const locks={common:norm('common'),ajaeggae:norm('ajaeggae')};
+    const locks={common:norm('common'),ajaeggae:norm('ajaeggae'),match:norm('match')};
     locks[qid]=locks[qid]==='closed'?'open':'closed';
     tx.set(ref,locks);
     window.__qLocks=locks;
@@ -1195,7 +1264,7 @@ window.leaveQuiz=function(){
 };
 window.showScreen=function(id){document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));document.getElementById(id).classList.remove('hidden')};
 window.showRankTab=function(qid){
-  ['common','ajaeggae'].forEach(id=>{
+  ['common','ajaeggae','match'].forEach(id=>{
     const b=document.getElementById('rank-tab-'+id);
     if(b)b.classList.toggle('tab-active',id===qid);
   });
@@ -1324,6 +1393,7 @@ window.startQuiz=async function(qid){
   qid=qid||curQuizId;
   curQuizId=qid;
   if(!nickname){alert('닉네임 설정 후 퀴즈를 시작할 수 있습니다.');showScreen('screen-nickname');return}
+  if(qid==='match'){startMatchGame();return}
   await ensureQuestFast(qid);
   const pool=getQuestionPool(qid);
   if(pool.length===0){alert('이 퀴즈에 문제가 없습니다.');return}
@@ -1598,18 +1668,22 @@ async function loadRanking(containerId,myScore,qid){
   if(!firebaseReady){wrap.innerHTML='<p style="color:#aaa;padding:20px">파이어베이스 연결 안 됨</p>';return}
   try{
 const rows=await fsGetAll('rankings/'+qid+'/records');
+    const isMatch=qid==='match';
     let data=[];
     rows.forEach(v=>{if(v&&typeof v==='object'&&typeof v.score==='number')data.push(v)});
     const seen={};data.forEach(r=>{const e=seen[r.nickname];if(!e||((r.date||0)<(e.date||0)))seen[r.nickname]=r});
     data=Object.values(seen);
-    data.sort((a,b)=>(b.score-a.score)||(a.time-b.time));
+    if(isMatch)data.sort((a,b)=>(a.score-b.score)||((a.date||0)-(b.date||0)));
+    else data.sort((a,b)=>(b.score-a.score)||(a.time-b.time));
     data=data.slice(0,50);
     if(data.length===0){wrap.innerHTML='<p style="color:#aaa;padding:20px">아직 랭킹 데이터가 없습니다</p>';return}
-let html='<table class="ranking-table"><thead><tr><th>#</th><th>닉네임</th><th>점수</th><th>정답</th></tr></thead><tbody>';
+    const colLabel=isMatch?'시간':'점수';
+let html=`<table class="ranking-table"><thead><tr><th>#</th><th>닉네임</th><th>${colLabel}</th><th>정답</th></tr></thead><tbody>`;
     data.forEach((r,i)=>{
-      const isMe=myScore!==null&&r.nickname===nickname&&r.score===myScore;
+      const isMe=myScore!==null&&r.nickname===nickname&&Math.abs((r.score||0)-myScore)<0.001;
       const medal=i===0?'1st':i===1?'2nd':i===2?'3rd':`${i+1}`;
-      html+=`<tr class="${isMe?'my-rank':''}"><td class="rank-medal">${medal}</td><td class="rank-name">${esc(r.nickname)}</td><td class="rank-score">${r.score}점</td><td>${r.correct}/${r.total}</td></tr>`;
+      const scoreCell=isMatch?(Number(r.score)||0).toFixed(1)+'초':(Number(r.score)||0)+'점';
+      html+=`<tr class="${isMe?'my-rank':''}"><td class="rank-medal">${medal}</td><td class="rank-name">${esc(r.nickname)}</td><td class="rank-score">${scoreCell}</td><td>${r.correct}/${r.total}</td></tr>`;
     });
     const title=QUIZ_LIST.find(q=>q.id===qid);
     html=(title?`<div class="rank-title">${esc(title.title)}</div>`:'')+html;
@@ -1792,14 +1866,17 @@ window.showAnalysisTab=function(t){
     document.getElementById('tab-stats').classList.toggle('tab-active',t==='stats');
     document.getElementById('tab-log').classList.toggle('tab-active',t==='log');
     document.getElementById('tab-quest').classList.toggle('tab-active',t==='quest');
+    document.getElementById('tab-match').classList.toggle('tab-active',t==='match');
     document.getElementById('analysis-controls').classList.toggle('hidden',t!=='stats');
     document.getElementById('analysis-wrap').classList.toggle('hidden',t!=='stats');
     if(t!=='stats')document.getElementById('analysis-detail').classList.add('hidden');
     document.getElementById('answerlog-wrap').classList.toggle('hidden',t!=='log');
     document.getElementById('quest-wrap').classList.toggle('hidden',t!=='quest');
+    document.getElementById('match-mgr-wrap').classList.toggle('hidden',t!=='match');
     if(t==='stats')setTimeout(()=>loadAnalysis(),0);
     if(t==='quest')qMgrRender();
     if(t==='log')loadPlayers();
+    if(t==='match')setTimeout(()=>matchMgrRender(),0);
   }catch(e){showDbg('탭전환 '+(e&&(e.message||e)));alert('탭 전환 오류: '+(e&&e.message||e))}
 };
 async function loadAnalysis(){
@@ -2064,6 +2141,289 @@ window.qMgrDel=function(key){
     qMgrRender();
     ensureQuestFast(adminQuiz).then(function(){qMgrRender()}).catch(function(){});
   }catch(err){alert('삭제 실패: '+(err&&err.message||err))}
+};
+// ============ 성냥 수학 퀴즈 ============
+const MCH={
+  CELLW:46,CELLH:84,GAP:18,PAD:26,
+  DIGIT_SLOTS:['A','B','C','D','E','F','G'],
+  GEO:{A:[8,7,30,7],B:[30,7,30,38],F:[8,7,8,38],G:[8,41,30,41],C:[30,45,30,76],E:[8,45,8,76],D:[8,76,30,76]},
+  OP:{'+':{V:[23,8,23,76],H:[8,42,30,42]},'-':{H:[8,42,30,42]}},
+  EQ:{U:[8,28,30,28],L:[8,52,30,52]},
+  DIGIT:{0:'ABCDEF',1:'BC',2:'ABGED',3:'ABCDG',4:'BCFG',5:'ACDFG',6:'ACDEFG',7:'ABC',8:'ABCDEFG',9:'ABCDFG'}
+};
+const MCH_REV={};Object.keys(MCH.DIGIT).forEach(d=>MCH_REV[MCH.DIGIT[d]]=String(d));
+function mDigitKey(on){let s='';'ABCDEFG'.split('').forEach(k=>{if(on[k])s+=k});return s}
+function mSlots(type,ch){
+  const o={};
+  if(type==='digit'){(MCH.DIGIT[ch]||'').split('').forEach(k=>o[k]=true)}
+  else if(type==='op'){Object.keys(MCH.OP[ch]||{}).forEach(k=>o[k]=true)}
+  else{o.U=true;o.L=true}
+  return o;
+}
+function mCellsFromExpr(expr){
+  const out=[];
+  (expr||'').split('').forEach(ch=>{
+    if(ch>='0'&&ch<='9')out.push({type:'digit',char:ch,slots:mSlots('digit',ch)});
+    else if(ch==='+'||ch==='-')out.push({type:'op',char:ch,slots:mSlots('op',ch)});
+    else if(ch==='=')out.push({type:'eq',char:'=',slots:mSlots('eq','=')});
+    else out.push({type:'bad',char:ch});
+  });
+  return out;
+}
+function mSlotGeo(cell,slot){
+  if(cell.type==='digit')return MCH.GEO[slot]||[0,0,0,0];
+  if(cell.type==='op')return (MCH.OP[cell.char]&&MCH.OP[cell.char][slot])||[0,0,46,84];
+  return MCH.EQ[slot]||[0,0,46,84];
+}
+function mCellChar(cell){
+  if(cell.type==='bad')return '@';
+  const k=mDigitKey(cell.slots);
+  if(cell.type==='digit')return MCH_REV[k]!==undefined?MCH_REV[k]:'@';
+  if(cell.type==='op'){const V=!!cell.slots.V,H=!!cell.slots.H;return V&&H?'+':(H&&!V?'-':'@')}
+  const u=!!cell.slots.U,l=!!cell.slots.L;
+  if(u&&l)return '=';
+  if(u||l)return '-';
+  return '@';
+}
+function mCompute(s){
+  let val=0,sgn=1,num=null;
+  for(const ch of s){
+    if(ch>='0'&&ch<='9')num=(num===null?0:num)*10+(ch.charCodeAt(0)-48);
+    else if(ch==='+'||ch==='-'){
+      if(num===null)return null;
+      val+=sgn*num;num=null;sgn=(ch==='+')?1:-1;
+    }else return null;
+  }
+  if(num===null)return null;
+  return val+sgn*num;
+}
+function buildMatchSVG(cells,interactive){
+  const ns='http://www.w3.org/2000/svg';
+  const w=MCH.PAD*2+cells.length*MCH.CELLW+(cells.length-1)*MCH.GAP;
+  const h=MCH.CELLH+16;
+  const svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('viewBox','0 0 '+w+' '+h);
+  svg.setAttribute('width','100%');
+  svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+  svg.style.maxWidth='440px';svg.style.display='block';svg.style.margin='0 auto';
+  cells.forEach((cell,ci)=>{
+    const allSlots=cell.type==='digit'?MCH.DIGIT_SLOTS:(cell.type==='op'?Object.keys(MCH.OP[cell.char]||{V:1,H:1}):(cell.type==='eq'?['U','L']:[]));
+    allSlots.forEach(slot=>{
+      const geo=mSlotGeo(cell,slot);
+      const on=!!cell.slots[slot];
+      const gx=geo[0]+MCH.PAD+ci*(MCH.CELLW+MCH.GAP);
+      const gy=geo[1]+8;
+      const g=document.createElementNS(ns,'g');
+      if(interactive){g.style.cursor='pointer';g.setAttribute('data-ci',ci);g.setAttribute('data-slot',slot)}
+      const hit=document.createElementNS(ns,'line');
+      [['x1',gx],['y1',gy],['x2',geo[2]+MCH.PAD+ci*(MCH.CELLW+MCH.GAP)],['y2',geo[3]+8]].forEach(p=>hit.setAttribute(p[0],p[1]));
+      hit.setAttribute('stroke','transparent');hit.setAttribute('stroke-width','26');hit.setAttribute('stroke-linecap','round');
+      const vis=document.createElementNS(ns,'line');
+      [['x1',gx],['y1',gy],['x2',geo[2]+MCH.PAD+ci*(MCH.CELLW+MCH.GAP)],['y2',geo[3]+8]].forEach(p=>vis.setAttribute(p[0],p[1]));
+      if(on){vis.setAttribute('stroke','#ffb300');vis.setAttribute('stroke-width','7');vis.setAttribute('stroke-linecap','round')}
+      else{vis.setAttribute('stroke','rgba(255,255,255,0.18)');vis.setAttribute('stroke-width','3');vis.setAttribute('stroke-dasharray','3 6');vis.setAttribute('stroke-linecap','round')}
+      g.appendChild(hit);g.appendChild(vis);
+      if(interactive){g.addEventListener('click',function(){mTap(ci,slot)})}
+      svg.appendChild(g);
+    });
+  });
+  return svg;
+}
+let matchState={puzzles:[],cur:0,moves:0,required:1,held:null,cells:[],results:[],timerInt:null,start:0,submittedEq:''};
+function mMsg(t){const el=document.getElementById('match-msg');if(el){el.textContent=t||'';el.className='answer-result';if(t)el.className+=t.indexOf('집었')>-1?'':'';}}
+function matchDraw(){const box=document.getElementById('match-svg');if(!box)return;box.innerHTML='';box.appendChild(buildMatchSVG(matchState.cells,true))}
+function matchHeldUI(){
+  const d=document.getElementById('match-held');if(!d)return;
+  if(!matchState.held){d.classList.add('hidden');d.innerHTML='';return}
+  const cell=matchState.cells[matchState.held.ci];const geo=mSlotGeo(cell,matchState.held.slot);
+  const ns='http://www.w3.org/2000/svg';
+  const s=document.createElementNS(ns,'svg');s.setAttribute('viewBox','0 0 '+MCH.CELLW+' '+MCH.CELLH);s.setAttribute('width','64');
+  const l=document.createElementNS(ns,'line');
+  [['x1',geo[0]],['y1',geo[1]],['x2',geo[2]],['y2',geo[3]]].forEach(p=>l.setAttribute(p[0],p[1]));
+  l.setAttribute('stroke','#ffb300');l.setAttribute('stroke-width','7');l.setAttribute('stroke-linecap','round');
+  s.appendChild(l);
+  d.innerHTML='<span>집은 성냥</span>';d.appendChild(s);d.insertAdjacentHTML('beforeend','<span style="color:#ccc;font-weight:400">→ 빈 자리(점선)를 눌러 놓으세요</span>');
+  d.classList.remove('hidden');
+}
+function matchMovesUI(){
+  const a=document.getElementById('match-moves');if(a)a.textContent=matchState.moves;
+  const b=document.getElementById('match-required');if(b)b.textContent=matchState.required;
+}
+function matchLoadPuzzle(){
+  const p=matchState.puzzles[matchState.cur];
+  if(!p)return;
+  matchState.cells=mCellsFromExpr(p.expr);
+  matchState.required=p.moves;matchState.moves=0;matchState.held=null;
+  const pr=document.getElementById('match-progress');if(pr)pr.textContent='성냥 '+(matchState.cur+1)+' / '+matchState.puzzles.length;
+  const pf=document.getElementById('match-progress-fill');if(pf)pf.style.width=(matchState.cur/Math.max(1,matchState.puzzles.length)*100)+'%';
+  const g=document.getElementById('match-goal');if(g)g.textContent=p.expr+' → 성립하게';
+  const hi=document.getElementById('match-inst');if(hi)hi.textContent='성냥을 눌러 집고, 빈 자리(점선)를 눌러 옮겨보세요 · '+p.moves+'개만 움직이면 정답';
+  const hb=document.getElementById('match-hint-btn'),ht=document.getElementById('match-hint-text');
+  if(p.hint){hb.classList.remove('hidden');ht.innerHTML='<strong>힌트</strong> '+esc(p.hint);ht.classList.add('hidden')}
+  else{hb.classList.add('hidden');ht.classList.add('hidden');ht.innerHTML=''}
+  matchDraw();matchHeldUI();matchMovesUI();mMsg('');
+}
+function mTap(ci,slot){
+  const cell=matchState.cells[ci];
+  if(!cell)return;
+  if(matchState.held===null){
+    if(cell.slots[slot]){matchState.held={ci:ci,slot:slot};cell.slots[slot]=false;mMsg('집었어요! 빈 자리(점선)를 눌러 놓으세요')}
+    else{mMsg('먼저 옮길 성냥(노란 성냥)을 눌러주세요')}
+  }else{
+    if(cell.slots[slot]){mMsg('이미 성냥이 있는 자리예요');return}
+    const h=matchState.held;
+    cell.slots[slot]=true;
+    if(!(h.ci===ci&&h.slot===slot))matchState.moves++;
+    matchState.held=null;mMsg('');
+  }
+  matchDraw();matchHeldUI();matchMovesUI();
+}
+function mTimerLabel(){
+  const el=document.getElementById('match-timer');if(!el)return;
+  const s=Math.max(0,Math.floor((Date.now()-matchState.start)/1000));
+  el.textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+}
+function mTimerStart(){matchState.start=Date.now();clearInterval(matchState.timerInt);mTimerLabel();matchState.timerInt=setInterval(mTimerLabel,300)}
+window.startMatchGame=async function(){
+  if(!nickname){alert('닉네임 설정 후 퀴즈를 시작할 수 있습니다.');showScreen('screen-nickname');return}
+  const d=document.getElementById('match-done');if(d)d.classList.add('hidden');
+  document.getElementById('match-play').classList.remove('hidden');
+  let rows=await withTimeout(fsGetAll('matchPuzzles'),3500).catch(()=>undefined);
+  if(rows===undefined||rows===null)rows=await fsRestList('matchPuzzles');
+  if(!rows||rows.length<5){alert('성냥 문제가 '+(rows?rows.length:0)+'개밖에 없어서 5문제를 낼 수 없어요. 관리자가 성냥 문제를 5개 이상 등록해야 해요.');return}
+  const pool=rows.filter(r=>r&&r.expr&&!mCellsFromExpr(r.expr).some(c=>c.type==='bad'));
+  if(pool.length<5){alert('올바른 성냥 문제가 '+(pool.length)+'개뿐입니다. 성냥 문제를 5개 이상 등록해주세요.');return}
+  shuffle(pool);
+  matchState.puzzles=pool.slice(0,5).map(r=>({id:r.id,expr:(r.expr||'').trim().replace(/[^0-9+\-=]/g,''),moves:Math.max(1,parseInt(r.moves,10)||1),hint:r.hint||''}));
+  matchState.cur=0;matchState.results=[];matchState.moves=0;matchState.held=null;matchState.submittedEq='';
+  curQuizId='match';
+  showScreen('screen-match');
+  mTimerStart();
+  matchLoadPuzzle();
+};
+window.matchCheck=function(){
+  if(!matchState.puzzles.length)return;
+  const eq=matchState.cells.map(mCellChar).join('');
+  if(eq.indexOf('@')>-1){mMsg('완성되지 않은 모양이 있어요. 숫자/기호가 되도록 맞춰주세요');sfx('wrong');return}
+  const parts=eq.split('=');
+  if(parts.length!==2){mMsg(parts.length>2?'= 기호가 여러 개예요. 정확히 하나만 만들어주세요':'= 기호를 만들어주세요');sfx('wrong');return}
+  if(matchState.moves!==matchState.required){mMsg('성냥 '+matchState.required+'개만 움직여야 해요. 지금은 '+matchState.moves+'개를 움직였어요 (되돌리기로 처음부터!)');sfx('wrong');return}
+  const lv=mCompute(parts[0]),rv=mCompute(parts[1]);
+  if(lv===null||rv===null){mMsg('계산할 수 없는 수식이에요');sfx('wrong');return}
+  if(lv!==rv){mMsg(parts[0]+' = '+lv+' 이고 '+parts[1]+' = '+rv+' 이에요. 같아지도록 움직여보세요');sfx('wrong');return}
+  matchState.submittedEq=eq;mMsg('');sfx('correct');
+  matchState.results.push(true);
+  if(matchState.cur<matchState.puzzles.length-1){matchState.cur++;setTimeout(matchLoadPuzzle,500)}
+  else{mFinish()}
+};
+window.matchResetPuzzle=function(){
+  if(!matchState.puzzles.length)return;
+  const p=matchState.puzzles[matchState.cur];
+  matchState.cells=mCellsFromExpr(p.expr);matchState.moves=0;matchState.held=null;mMsg('');
+  matchDraw();matchHeldUI();matchMovesUI();
+};
+window.matchSkip=function(){
+  if(!matchState.puzzles.length)return;
+  matchState.results.push(false);
+  if(matchState.cur<matchState.puzzles.length-1){matchState.cur++;matchLoadPuzzle()}
+  else{mFinish()}
+};
+window.matchToggleHint=function(){const ht=document.getElementById('match-hint-text');if(ht){ht.classList.toggle('hidden');document.getElementById('match-hint-btn').textContent=ht.classList.contains('hidden')?'힌트 보기':'힌트 숨기기'}};
+window.matchQuit=function(){
+  if(!confirm('성냥 퀴즈를 중단하고 홈으로 갈까요?\n진행 기록은 저장되지 않아요.'))return;
+  clearInterval(matchState.timerInt);goStart();
+};
+async function mFinish(){
+  clearInterval(matchState.timerInt);
+  const now=Date.now();
+  const elapsed=Math.round((now-matchState.start)/100)/10;
+  const solved=matchState.results.filter(Boolean).length;
+  document.getElementById('match-play').classList.add('hidden');
+  const done=document.getElementById('match-done');done.classList.remove('hidden');
+  document.getElementById('match-done-time').textContent=elapsed;
+  document.getElementById('match-done-sub').textContent=solved===5?'5문제 완벽 해결!':'푼 문제 '+solved+' / 5';
+  if(firebaseReady){
+    const runId=now.toString(36)+Math.random().toString(36).slice(2,6);
+    const docs=matchState.puzzles.map((p,i)=>{
+      const ok=!!matchState.results[i];
+      return {quiz:'match',uid:uid,nickname:nickname,cat:'성냥',q:p.expr+' (성냥 '+p.moves+'개 이동)',userAns:ok?matchState.submittedEq:'(건너뜀)',correctAnswer:p.expr+' → 성립',correct:ok&&matchState.results[i]!==false,date:now,run:runId};
+    });
+    try{
+      const safe=(nickname||'empty').replace(/[\/.]+$/,'').replace(/[\/.]/g,'_');
+      let prev=[];
+      let d=await withTimeout(fsGetDoc('players',safe),3500).catch(()=>undefined);
+      if(d===undefined)d=await fsRestGet('players/'+encodeURIComponent(safe));
+      if(d&&Array.isArray(d.attempts))prev=d.attempts;
+      fsSet('players',safe,{attempts:prev.concat(docs),quiz:'match',last:now},{merge:true});
+    }catch(e){console.warn('답안 기록 저장 실패:',e)}
+    try{
+      fsSet('rankings','match',{quiz:'match',updated:now},{merge:true});
+      fsSet('rankings/match/records',(nickname+'_'+now).replace(/[\/.]+$/,'').replace(/[\/.]/g,'_'),{quiz:'match',uid:uid,nickname:nickname,score:elapsed,correct:solved,total:5,time:0,date:now});
+      if(solved===5)loadRanking('match-rank',elapsed,'match');
+    }catch(e){console.warn('랭킹 저장 실패:',e)}
+  }
+  if(solved===5)setTimeout(()=>loadRanking('match-rank',elapsed,'match'),600);
+  setTimeout(()=>loadRanking('match-rank',null,'match'),900);
+}
+// ---------- 관리자: 성냥 문제 관리 ----------
+let matchMgrList=null;
+window.matchMgrToggleForm=function(){
+  const f=document.getElementById('mm-form');
+  if(!f)return;
+  if(!f.classList.contains('hidden')){f.classList.add('hidden');return}
+  f.classList.remove('hidden');
+  document.getElementById('mm-expr').value='';document.getElementById('mm-hint').value='';document.getElementById('mm-moves').value='1';
+  document.getElementById('mm-preview').innerHTML='';
+  setTimeout(()=>document.getElementById('mm-expr').focus(),60);
+};
+window.matchMgrPreview=function(){
+  const expr=(document.getElementById('mm-expr').value||'').trim();
+  const box=document.getElementById('mm-preview');
+  if(!box)return;
+  if(!expr){box.innerHTML='';return}
+  box.innerHTML='';
+  const cells=mCellsFromExpr(expr).filter(c=>c.type!=='bad');
+  if(cells.length===0||mCellsFromExpr(expr).some(c=>c.type==='bad')){box.innerHTML='<p style="color:#f44336;font-size:.85em">숫자·+·-·= 만 사용할 수 있어요</p>';return}
+  box.appendChild(buildMatchSVG(cells,false));
+};
+window.matchPuzzleAdd=async function(){
+  const expr=(document.getElementById('mm-expr').value||'').replace(/[^0-9+\-=]/g,'');
+  const moves=parseInt(document.getElementById('mm-moves').value,10)||1;
+  const hint=(document.getElementById('mm-hint').value||'').trim();
+  if(!expr){alert('수식을 입력해주세요. 예: 6+4=4');return}
+  const cells=mCellsFromExpr(expr);
+  if(cells.some(c=>c.type==='bad')||expr.split('=').length!==2){alert('수식 형식이 잘못됐어요. 숫자와 +,-,= 로만 만드세요');return}
+  const lv=mCompute(expr.split('=')[0]),rv=mCompute(expr.split('=')[1]);
+  if(lv===rv){alert('이 수식은 이미 성립해요! 성립하지 않는 수식을 입력해야 풀 문제가 됩니다.');return}
+  if(moves<1||moves>3){alert('성냥 이동 수는 1~3 사이로 해주세요.');return}
+  fsSet('matchPuzzles','mq_'+fsNewId('matchPuzzles').replace(/[/.]/g,'_'),{expr:expr,moves:moves,hint:hint,by:uid,at:Date.now()});
+  matchMgrToggleForm();
+  matchMgrRender();
+};
+window.matchPuzzleDel=function(key){
+  if(!confirm('이 성냥 문제를 삭제할까요?'))return;
+  fsDel('matchPuzzles',key);
+  if(matchMgrList)matchMgrList=matchMgrList.filter(r=>r.id!==key);
+  matchMgrRender();
+};
+window.matchMgrRender=async function(){
+  const wrap=document.getElementById('mm-list');
+  if(!wrap)return;
+  wrap.innerHTML='<div class="loading"><div class="spinner"></div></div>';
+  try{
+    let rows=await withTimeout(fsGetAll('matchPuzzles'),3500).catch(()=>undefined);
+    if(rows===undefined||rows===null)rows=await fsRestList('matchPuzzles');
+    if(rows===undefined||rows===null)rows=[];
+    matchMgrList=rows;
+    if(rows.length===0){wrap.innerHTML='<p style="color:#aaa;padding:10px">아직 등록된 성냥 문제가 없습니다. 위에서 추가해주세요.</p>';return}
+    let html='';
+    rows.forEach(r=>{
+      const delKey=(r.id||'').replace(/["\\]/g,'');
+      html+='<div class="quest-item"><div class="qt-left"><div style="font-weight:700">'+esc(r.expr||'')+' <span style="color:#777;font-weight:400">· 성냥 '+(r.moves||1)+'개 이동</span></div><div style="color:#888;font-size:.85em">'+esc(r.hint||'(힌트 없음)')+'</div></div><div style="display:flex;gap:8px;align-items:center"><button class="btn btn-secondary" style="padding:6px 12px;font-size:.8em;margin:0" onclick="matchPuzzleDel(\''+delKey+'\')">삭제</button></div></div>';
+    });
+    html+='<p style="color:#aaa;font-size:.85em;margin-top:10px">총 '+rows.length+'문제 · 플레이어는 여기서 5문제를 랜덤으로 받아요</p>';
+    wrap.innerHTML=html;
+  }catch(e){wrap.innerHTML='<p style="color:#aaa;padding:10px">불러오기 실패</p>'}
 };
 init();
 </script>
