@@ -163,6 +163,10 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 .quiz-chip-match{background:linear-gradient(135deg,#e64a19,#ff8a3c);color:#fff}
 .ms-held{display:flex;align-items:center;justify-content:center;gap:8px;color:#ffd200;font-weight:700;font-size:.9em;margin:6px 0}
 .match-goal{color:#ffd200;font-weight:700}
+#match-svg svg{-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+.eq-live{font-size:1.2em;font-weight:700;letter-spacing:3px;min-height:1.4em;margin:2px 0}
+.eq-ok{color:#7ed957}
+.eq-bad{color:#ff6b6b}
 .btn-my{background:linear-gradient(135deg,#ffd200,#f7971e);color:#2d2a10 !important;font-weight:800}
 .btn-rank{background:linear-gradient(135deg,#2996f3,#6a4ff7);font-weight:800}
 .qq-arrow{color:#ffd200;font-size:1.2em}
@@ -345,6 +349,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
         <p id="match-inst" class="question-text" style="font-size:.95em"></p>
         <div id="match-svg" style="width:100%;display:flex;justify-content:center;padding:6px 0"></div>
         <div id="match-held" class="ms-held hidden"></div>
+        <p id="match-eq-live" class="eq-live"></p>
         <p id="match-msg" class="answer-result" style="min-height:1.5em"></p>
         <button id="match-hint-btn" class="btn btn-secondary hidden" style="margin:2px auto;display:block;font-size:.85em;padding:8px 16px" onclick="matchToggleHint()">힌트 보기</button>
         <p id="match-hint-text" class="explain-box hidden"></p>
@@ -580,7 +585,7 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(135deg,#0f0c29
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script>
-const APP_VER='v20';
+const APP_VER='v22';
 (function(){try{var m=(location.search||'').match(/[?&]v=([^&]*)/);if(!m||decodeURIComponent(m[1])!==APP_VER)location.replace(location.pathname+'?v='+APP_VER)}catch(e){}})();
 window.__dbgErrs=[];
 function showDbg(msg){
@@ -2197,38 +2202,96 @@ function mCompute(s){
   if(num===null)return null;
   return val+sgn*num;
 }
+function mGeoAt(cell,ci,slot){
+  const geo=mSlotGeo(cell,slot);
+  return [geo[0]+MCH.PAD+ci*(MCH.CELLW+MCH.GAP),geo[1]+8,geo[2]+MCH.PAD+ci*(MCH.CELLW+MCH.GAP),geo[3]+8];
+}
 function buildMatchSVG(cells,interactive){
   const ns='http://www.w3.org/2000/svg';
   const w=MCH.PAD*2+cells.length*MCH.CELLW+(cells.length-1)*MCH.GAP;
   const h=MCH.CELLH+16;
   const svg=document.createElementNS(ns,'svg');
   svg.setAttribute('viewBox','0 0 '+w+' '+h);
-  svg.setAttribute('width','100%');
-  svg.setAttribute('preserveAspectRatio','xMidYMid meet');
-  svg.style.maxWidth='440px';svg.style.display='block';svg.style.margin='0 auto';
+  svg.setAttribute('width','100%');svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+  svg.style.maxWidth='480px';svg.style.display='block';svg.style.margin='0 auto';svg.style.touchAction='none';
+  const slots=[];
   cells.forEach((cell,ci)=>{
     const allSlots=cell.type==='digit'?MCH.DIGIT_SLOTS:(cell.type==='op'?Object.keys(MCH.OP[cell.char]||{V:1,H:1}):(cell.type==='eq'?['U','L']:[]));
-    allSlots.forEach(slot=>{
-      const geo=mSlotGeo(cell,slot);
-      const on=!!cell.slots[slot];
-      const gx=geo[0]+MCH.PAD+ci*(MCH.CELLW+MCH.GAP);
-      const gy=geo[1]+8;
-      const g=document.createElementNS(ns,'g');
-      if(interactive){g.style.cursor='pointer';g.setAttribute('data-ci',ci);g.setAttribute('data-slot',slot)}
-      const hit=document.createElementNS(ns,'line');
-      [['x1',gx],['y1',gy],['x2',geo[2]+MCH.PAD+ci*(MCH.CELLW+MCH.GAP)],['y2',geo[3]+8]].forEach(p=>hit.setAttribute(p[0],p[1]));
-      hit.setAttribute('stroke','transparent');hit.setAttribute('stroke-width','26');hit.setAttribute('stroke-linecap','round');
-      const vis=document.createElementNS(ns,'line');
-      [['x1',gx],['y1',gy],['x2',geo[2]+MCH.PAD+ci*(MCH.CELLW+MCH.GAP)],['y2',geo[3]+8]].forEach(p=>vis.setAttribute(p[0],p[1]));
-      if(on){vis.setAttribute('stroke','#ffb300');vis.setAttribute('stroke-width','7');vis.setAttribute('stroke-linecap','round')}
-      else{vis.setAttribute('stroke','rgba(255,255,255,0.18)');vis.setAttribute('stroke-width','3');vis.setAttribute('stroke-dasharray','3 6');vis.setAttribute('stroke-linecap','round')}
-      g.appendChild(hit);g.appendChild(vis);
-      if(interactive){g.addEventListener('click',function(){mTap(ci,slot)})}
-      svg.appendChild(g);
-    });
+    allSlots.forEach(slot=>{slots.push({ci:ci,cell:cell,slot:slot,on:!!cell.slots[slot],geo:mGeoAt(cell,ci,slot)})});
+  });
+  slots.sort(function(a,b){return (a.on?0:1)-(b.on?0:1)});
+  slots.forEach(function(s){
+    const g=document.createElementNS(ns,'g');
+    const vis=document.createElementNS(ns,'line');
+    [['x1',s.geo[0]],['y1',s.geo[1]],['x2',s.geo[2]],['y2',s.geo[3]]].forEach(p=>vis.setAttribute(p[0],p[1]));
+    vis.setAttribute('pointer-events','none');
+    if(s.on){vis.setAttribute('stroke','#ffb300');vis.setAttribute('stroke-width','7');vis.setAttribute('stroke-linecap','round')}
+    else{vis.setAttribute('stroke','rgba(255,255,255,0.22)');vis.setAttribute('stroke-width','3');vis.setAttribute('stroke-dasharray','3 6');vis.setAttribute('stroke-linecap','round')}
+    g.appendChild(vis);
+    const hit=document.createElementNS(ns,'line');
+    [['x1',s.geo[0]],['y1',s.geo[1]],['x2',s.geo[2]],['y2',s.geo[3]]].forEach(p=>hit.setAttribute(p[0],p[1]));
+    hit.setAttribute('stroke','#000');hit.setAttribute('stroke-width','24');hit.setAttribute('stroke-linecap','round');
+    hit.setAttribute('opacity','0');hit.setAttribute('pointer-events','all');
+    hit.setAttribute('data-ms',s.ci);hit.setAttribute('data-ms-slot',s.slot);
+    g.appendChild(hit);
+    if(interactive){
+      hit.style.cursor='pointer';hit.style.touchAction='none';
+      hit.addEventListener('pointerdown',function(ev){mDown(ev,s.ci,s.slot)});
+    }
+    svg.appendChild(g);
   });
   return svg;
 }
+const matchDrag={ci:-1,slot:'',sx:0,sy:0,moving:false,floatEl:null};
+function mFloatCreate(){
+  mFloatClear();
+  const h=matchState.held;if(!h)return;
+  const cell=matchState.cells[h.ci];const geo=mSlotGeo(cell,h.slot);
+  const ns='http://www.w3.org/2000/svg';
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;z-index:9999;pointer-events:none;transform:translate(-54%,-118%);';
+  const s=document.createElementNS(ns,'svg');
+  s.setAttribute('viewBox','0 0 '+MCH.CELLW+' '+MCH.CELLH);s.style.width='64px';s.style.height='auto';s.style.display='block';
+  const l=document.createElementNS(ns,'line');
+  [['x1',geo[0]],['y1',geo[1]],['x2',geo[2]],['y2',geo[3]]].forEach(p=>l.setAttribute(p[0],p[1]));
+  l.setAttribute('stroke','#ffb300');l.setAttribute('stroke-width','9');l.setAttribute('stroke-linecap','round');
+  l.style.filter='drop-shadow(0 3px 8px rgba(0,0,0,0.7))';
+  s.appendChild(l);el.appendChild(s);
+  document.body.appendChild(el);
+  matchDrag.floatEl=el;
+}
+function mFloatClear(){if(matchDrag.floatEl&&matchDrag.floatEl.parentNode)matchDrag.floatEl.parentNode.removeChild(matchDrag.floatEl);matchDrag.floatEl=null}
+function mFloatMove(x,y){if(!matchDrag.floatEl){mFloatCreate();if(!matchDrag.floatEl)return}matchDrag.floatEl.style.left=(x-2)+'px';matchDrag.floatEl.style.top=(y+6)+'px'}
+function mDocMove(ev){
+  if(!matchState.held||matchDrag.ci<0)return;
+  const dx=ev.clientX-matchDrag.sx,dy=ev.clientY-matchDrag.sy;
+  if(!matchDrag.moving&&Math.abs(dx)+Math.abs(dy)>8){matchDrag.moving=true;matchHeldUI();mMsg('놓을 자리(점선)로 끌어서 손을 떼세요')}
+  if(matchDrag.moving)mFloatMove(ev.clientX,ev.clientY);
+}
+function mDocUp(ev){
+  if(!matchState.held||matchDrag.ci<0)return;
+  if(matchDrag.moving){
+    let placed=false;
+    const et=document.elementFromPoint(ev.clientX,ev.clientY);
+    const hitEl=et&&et.closest?et.closest('[data-ms]'):null;
+    if(hitEl){
+      const ci2=+hitEl.getAttribute('data-ms');
+      const slot=hitEl.getAttribute('data-ms-slot');
+      const cell=matchState.cells[ci2];
+      if(cell&&!cell.slots[slot]){
+        const h=matchState.held;cell.slots[slot]=true;
+        if(!(h.ci===ci2&&h.slot===slot))matchState.moves++;
+        matchState.held=null;placed=true;
+      }
+    }
+    if(!placed){const h=matchState.held;if(h)matchState.cells[h.ci].slots[h.slot]=true;matchState.held=null}
+    matchDraw();matchHeldUI();matchMovesUI();updateLifeEq();
+    mMsg(placed?'':(hitEl?'그 자리에는 놓을 수 없어요. 빈 자리(점선)에 놓으세요':'여기에 놓을 수 없어요. 빈 자리(점선)로 끌어주세요'));
+    mFloatClear();
+  }
+}
+document.addEventListener('pointermove',mDocMove,{passive:false});
+document.addEventListener('pointerup',mDocUp);
 let matchState={puzzles:[],cur:0,moves:0,required:1,held:null,cells:[],results:[],timerInt:null,start:0,submittedEq:''};
 function mMsg(t){const el=document.getElementById('match-msg');if(el){el.textContent=t||'';el.className='answer-result';if(t)el.className+=t.indexOf('집었')>-1?'':'';}}
 function matchDraw(){const box=document.getElementById('match-svg');if(!box)return;box.innerHTML='';box.appendChild(buildMatchSVG(matchState.cells,true))}
@@ -2242,12 +2305,50 @@ function matchHeldUI(){
   [['x1',geo[0]],['y1',geo[1]],['x2',geo[2]],['y2',geo[3]]].forEach(p=>l.setAttribute(p[0],p[1]));
   l.setAttribute('stroke','#ffb300');l.setAttribute('stroke-width','7');l.setAttribute('stroke-linecap','round');
   s.appendChild(l);
-  d.innerHTML='<span>집은 성냥</span>';d.appendChild(s);d.insertAdjacentHTML('beforeend','<span style="color:#ccc;font-weight:400">→ 빈 자리(점선)를 눌러 놓으세요</span>');
+  d.innerHTML='<span>집은 성냥</span>';d.appendChild(s);d.insertAdjacentHTML('beforeend','<span style="color:#ccc;font-weight:400">→ 빈 자리(점선)를 누르거나 드래그해서 놓으세요</span>');
   d.classList.remove('hidden');
 }
 function matchMovesUI(){
   const a=document.getElementById('match-moves');if(a)a.textContent=matchState.moves;
   const b=document.getElementById('match-required');if(b)b.textContent=matchState.required;
+}
+function updateLifeEq(){
+  const el=document.getElementById('match-eq-live');if(!el)return;
+  const eq=matchState.cells.map(mCellChar).join('');
+  const bad=eq.indexOf('@')>-1||eq.split('=').length!==2;
+  el.textContent=eq;
+  el.className=bad?'eq-live eq-bad':'eq-live eq-ok';
+}
+function mDown(ev,ci,slot){
+  try{ev.preventDefault()}catch(e){}
+  if(matchState.held===null){
+    const cell=matchState.cells[ci];
+    if(!cell)return;
+    if(!cell.slots[slot]){mMsg('먼저 옮길 성냥(노란 성냥)을 눌러주세요');return}
+    matchState.held={ci:ci,slot:slot};cell.slots[slot]=false;
+    matchDrag.ci=ci;matchDrag.slot=slot;matchDrag.sx=ev.clientX;matchDrag.sy=ev.clientY;matchDrag.moving=false;
+    matchDraw();matchHeldUI();matchMovesUI();updateLifeEq();
+    mFloatCreate();
+    mMsg('성냥을 집었어요! 빈 자리(점선)로 끌거나, 빈 자리를 눌러서 놓으세요');
+  }else{
+    const cell2=matchState.cells[ci];
+    if(!cell2)return;
+    if(cell2.slots[slot]){
+      const h=matchState.held;matchState.cells[h.ci].slots[h.slot]=true;
+      matchState.held={ci:ci,slot:slot};cell2.slots[slot]=false;
+      matchDrag.ci=ci;matchDrag.slot=slot;matchDrag.sx=ev.clientX;matchDrag.sy=ev.clientY;matchDrag.moving=false;
+      matchDraw();matchHeldUI();matchMovesUI();updateLifeEq();
+      mFloatCreate();
+      mMsg('다른 성냥을 집었어요');
+      return;
+    }
+    const h=matchState.held;
+    cell2.slots[slot]=true;
+    if(!(h.ci===ci&&h.slot===slot))matchState.moves++;
+    matchState.held=null;mFloatClear();
+    matchDraw();matchHeldUI();matchMovesUI();updateLifeEq();
+    mMsg('놓았어요!'+(matchState.moves===matchState.required?' 이제 확인을 눌러보세요':''));
+  }
 }
 function matchLoadPuzzle(){
   const p=matchState.puzzles[matchState.cur];
@@ -2257,26 +2358,11 @@ function matchLoadPuzzle(){
   const pr=document.getElementById('match-progress');if(pr)pr.textContent='성냥 '+(matchState.cur+1)+' / '+matchState.puzzles.length;
   const pf=document.getElementById('match-progress-fill');if(pf)pf.style.width=(matchState.cur/Math.max(1,matchState.puzzles.length)*100)+'%';
   const g=document.getElementById('match-goal');if(g)g.textContent=p.expr+' → 성립하게';
-  const hi=document.getElementById('match-inst');if(hi)hi.textContent='성냥을 눌러 집고, 빈 자리(점선)를 눌러 옮겨보세요 · '+p.moves+'개만 움직이면 정답';
+  const hi=document.getElementById('match-inst');if(hi)hi.textContent='노란 성냥을 끌어서 옮기거나, 탭해서 집고 빈 자리(점선)에 놓으세요 · 성냥 '+p.moves+'개만 움직이면 정답';
   const hb=document.getElementById('match-hint-btn'),ht=document.getElementById('match-hint-text');
   if(p.hint){hb.classList.remove('hidden');ht.innerHTML='<strong>힌트</strong> '+esc(p.hint);ht.classList.add('hidden')}
   else{hb.classList.add('hidden');ht.classList.add('hidden');ht.innerHTML=''}
-  matchDraw();matchHeldUI();matchMovesUI();mMsg('');
-}
-function mTap(ci,slot){
-  const cell=matchState.cells[ci];
-  if(!cell)return;
-  if(matchState.held===null){
-    if(cell.slots[slot]){matchState.held={ci:ci,slot:slot};cell.slots[slot]=false;mMsg('집었어요! 빈 자리(점선)를 눌러 놓으세요')}
-    else{mMsg('먼저 옮길 성냥(노란 성냥)을 눌러주세요')}
-  }else{
-    if(cell.slots[slot]){mMsg('이미 성냥이 있는 자리예요');return}
-    const h=matchState.held;
-    cell.slots[slot]=true;
-    if(!(h.ci===ci&&h.slot===slot))matchState.moves++;
-    matchState.held=null;mMsg('');
-  }
-  matchDraw();matchHeldUI();matchMovesUI();
+  matchDraw();matchHeldUI();matchMovesUI();updateLifeEq();mMsg('');mFloatClear();
 }
 function mTimerLabel(){
   const el=document.getElementById('match-timer');if(!el)return;
@@ -2298,11 +2384,13 @@ window.startMatchGame=async function(){
   matchState.cur=0;matchState.results=[];matchState.moves=0;matchState.held=null;matchState.submittedEq='';
   curQuizId='match';
   showScreen('screen-match');
+  mFloatClear();
   mTimerStart();
   matchLoadPuzzle();
 };
 window.matchCheck=function(){
   if(!matchState.puzzles.length)return;
+  if(matchState.held){mMsg('손에 성냥이 들려 있어요. 빈 자리(점선)에 놓고 확인해주세요');return}
   const eq=matchState.cells.map(mCellChar).join('');
   if(eq.indexOf('@')>-1){mMsg('완성되지 않은 모양이 있어요. 숫자/기호가 되도록 맞춰주세요');sfx('wrong');return}
   const parts=eq.split('=');
@@ -2320,7 +2408,7 @@ window.matchResetPuzzle=function(){
   if(!matchState.puzzles.length)return;
   const p=matchState.puzzles[matchState.cur];
   matchState.cells=mCellsFromExpr(p.expr);matchState.moves=0;matchState.held=null;mMsg('');
-  matchDraw();matchHeldUI();matchMovesUI();
+  matchDraw();matchHeldUI();matchMovesUI();updateLifeEq();mFloatClear();
 };
 window.matchSkip=function(){
   if(!matchState.puzzles.length)return;
@@ -2331,7 +2419,7 @@ window.matchSkip=function(){
 window.matchToggleHint=function(){const ht=document.getElementById('match-hint-text');if(ht){ht.classList.toggle('hidden');document.getElementById('match-hint-btn').textContent=ht.classList.contains('hidden')?'힌트 보기':'힌트 숨기기'}};
 window.matchQuit=function(){
   if(!confirm('성냥 퀴즈를 중단하고 홈으로 갈까요?\n진행 기록은 저장되지 않아요.'))return;
-  clearInterval(matchState.timerInt);goStart();
+  clearInterval(matchState.timerInt);mFloatClear();goStart();
 };
 async function mFinish(){
   clearInterval(matchState.timerInt);
