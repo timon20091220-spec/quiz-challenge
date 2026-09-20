@@ -1,0 +1,58 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function admin() {
+      return signedIn() && request.auth.token.email == 'timon20091220@gmail.com';
+    }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if admin();
+    }
+
+    match /matchPuzzles/{docId} {
+      allow read: if signedIn();
+      allow write: if admin();
+    }
+
+    match /accounts/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /players/{docId} {
+      allow read, write: if signedIn();
+    }
+
+    match /players/{docId}/{subpath=**} {
+      allow read, write: if signedIn();
+    }
+
+    match /rankings/{quizId} {
+      allow read: if true;
+      allow write: if signedIn();
+    }
+
+    match /rankings/{quizId}/{subpath=**} {
+      allow read: if true;
+      allow write: if signedIn();
+    }
+
+    match /qstats/{docId} {
+      allow read, write: if signedIn();
+    }
+
+    match /quest/{docId} {
+      allow read: if signedIn();
+      allow write: if admin();
+    }
+  }
+}
