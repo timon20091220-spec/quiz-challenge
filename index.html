@@ -737,10 +737,21 @@ function fsParseValue(v){
   if(v.arrayValue!==undefined)return (v.arrayValue.values||[]).map(fsParseValue);
   return null;
 }
+async function fsRestFetch(url,opts){
+  const o=Object.assign({},opts||{});
+  const headers=Object.assign({},o.headers||{});
+  try{
+    const u=firebase&&firebase.auth?firebase.auth().currentUser:null;
+    const token=u&&u.getIdToken?await withTimeout(u.getIdToken(),2500).catch(()=>null):null;
+    if(token)headers.Authorization='Bearer '+token;
+  }catch(e){}
+  o.headers=headers;
+  return withTimeout(fetch(url,o),4500);
+}
 async function fsRestGet(path){
   try{
     const url='https://firestore.googleapis.com/v1/projects/quiz-ranking-6cb9f/databases/(default)/documents/'+path+'?key=AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k';
-    const r=await withTimeout(fetch(url),4500);
+    const r=await fsRestFetch(url);
     if(!r.ok)return null;
     const j=await r.json();
     const o={id:(j.name||'').split('/').pop()};
@@ -751,7 +762,7 @@ async function fsRestGet(path){
 async function fsRestList(path){
   try{
     const url='https://firestore.googleapis.com/v1/projects/quiz-ranking-6cb9f/databases/(default)/documents/'+path+'?pageSize=200&key=AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k';
-    const r=await withTimeout(fetch(url),4500);
+    const r=await fsRestFetch(url);
     if(!r.ok)return null;
     const j=await r.json();
     return (j.documents||[]).map(d=>{
@@ -770,15 +781,16 @@ async function fsRestPatch(path,fields){
       else if(typeof v==='number')f[k]={integerValue:String(v)};
       else f[k]={stringValue:String(v)};
     });
-    const url='https://firestore.googleapis.com/v1/projects/quiz-ranking-6cb9f/databases/(default)/documents/'+path+'?key=AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k';
-    const r=await withTimeout(fetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:f})}),4500);
+    const mask=Object.keys(f).map(k=>'&updateMask.fieldPaths='+encodeURIComponent(k)).join('');
+    const url='https://firestore.googleapis.com/v1/projects/quiz-ranking-6cb9f/databases/(default)/documents/'+path+'?key=AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k'+mask;
+    const r=await fsRestFetch(url,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({fields:f})});
     return r.ok;
   }catch(e){return false}
 }
 async function accountsProbe(uid){
   try{
     const url='https://firestore.googleapis.com/v1/projects/quiz-ranking-6cb9f/databases/(default)/documents/accounts/'+encodeURIComponent(uid)+'?key=AIzaSyBr0KEp0He77u9pnXb8_ywAGskPuZ60r7k';
-    const r=await withTimeout(fetch(url),4000);
+    const r=await fsRestFetch(url);
     if(r.status===404)return null;
     if(!r.ok)return undefined;
     const j=await r.json();
